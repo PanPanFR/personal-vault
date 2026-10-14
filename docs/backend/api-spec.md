@@ -805,6 +805,12 @@ Called when **all previously authorized devices are lost**. Authorizes a clean d
   "vault_id": "01J9Z8QK7M3V6P2R5T8W4Y6U1A",
   "device_id": "e4f5a6b7-c8d9-4012-e3f4-a5b6c7d8e9f0",
   "device_token": "bmV3LTI1Ni1iaXQtZGV2aWNlLWJlYXJlci10b2tlbg",
+  "recovery_envelope": {
+    "crypto_format_version": 1,
+    "key_version": 1,
+    "nonce_b64u": "rCv...24_bytes_base64url...",
+    "wrapped_dek_b64u": "rec...wrapped_32_byte_dek_base64url..."
+  },
   "created_at": "2026-10-13T12:20:00.000Z"
 }
 ```
