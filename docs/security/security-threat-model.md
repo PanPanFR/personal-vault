@@ -354,7 +354,7 @@ To prevent denial-of-service (DoS), memory exhaustion on constrained mobile brow
 ## 8. Cryptographic Primitives, HKDF Context Labels & AAD Reference
 
 *Citations: PRD §8 (FR-6), §10 (Data model), Appendix D (Crypto/format versions).*  
-*Note: Detailed mathematical algorithms, derivation routines, and test vectors are normative in `docs/crypto-spec.md`.*
+*Note: Detailed mathematical algorithms, derivation routines, and test vectors are normative in `docs/backend/crypto-spec.md`.*
 
 ### 8.1 Primary Cryptographic Algorithms
 
@@ -429,7 +429,7 @@ All API errors return a standardized JSON envelope:
 
 *Normative Rule: Every error code maps to exactly one UI category (PRD Appendix A).*
 
-> TODO(question): PRD Appendix A lists `QUOTA_EXHAUSTED` under both "network failure (`INTERNAL_ERROR` retryable, `QUOTA_EXHAUSTED`)" and "quota exhaustion (`QUOTA_EXHAUSTED`)" despite asserting "every code maps to exactly one category". In this specification and `docs/api-spec.md`, `QUOTA_EXHAUSTED` is assigned exclusively to the dedicated "Quota exhaustion" category (503 status, UI displays "sync paused", local storage maintained), while `INTERNAL_ERROR` is assigned exclusively to "Network failure".
+> TODO(question): PRD Appendix A lists `QUOTA_EXHAUSTED` under both "network failure (`INTERNAL_ERROR` retryable, `QUOTA_EXHAUSTED`)" and "quota exhaustion (`QUOTA_EXHAUSTED`)" despite asserting "every code maps to exactly one category". In this specification and `docs/backend/api-spec.md`, `QUOTA_EXHAUSTED` is assigned exclusively to the dedicated "Quota exhaustion" category (503 status, UI displays "sync paused", local storage maintained), while `INTERNAL_ERROR` is assigned exclusively to "Network failure".
 
 ```
 +-------------------------------------------------------------------------------------------------------+

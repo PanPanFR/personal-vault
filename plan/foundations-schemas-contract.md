@@ -26,7 +26,7 @@ OUT: any UI, any crypto implementation, any Worker code, any sync logic. Those a
 
 ## Files / Areas Likely Affected
 
-- `docs/api-spec.md` (NEW — normative human-readable contract; `openapi.yaml` is generated mirror kept in sync by drift CI — never hand-edit both independently)
+- `docs/backend/api-spec.md` (NEW — normative human-readable contract; `openapi.yaml` is generated mirror kept in sync by drift CI — never hand-edit both independently)
 - `src/lib/schemas.ts` (NEW — item Zod/valibot schemas + tag validator + 256 KiB guard constant)
 - `src/lib/versions.ts` (NEW — the four `=1` constants + refuse-to-downgrade helper signatures)
 - `src/lib/errors.ts` (NEW — Appendix A code enum + UI category map + HTTP map)
@@ -43,13 +43,13 @@ OUT: any UI, any crypto implementation, any Worker code, any sync logic. Those a
 2. Write `src/lib/schemas.ts`: four item schemas, envelope field-name lists (master Appendix D ×9 fields, recovery ×4 + verifier), tag validator, plaintext-size guard (measure serialized JSON bytes, reject >256 KiB pre-encryption).
 3. Write `src/lib/errors.ts`: all 18 Appendix A codes with HTTP + retryable + UI-category mapping (7 categories).
 4. Write Dexie schema + `migrations/0001_init.sql` (all §10 tables/columns/indexes; ciphertext cap comment 384 KiB; no plaintext content indexes).
-5. Write `openapi.yaml` (machine-readable mirror of `docs/api-spec.md`): all 9 endpoints, request/response shapes, auth (device token; token+Ed25519 signature where required), size caps, error `code/message/retryable` envelope, `429` + `Retry-After`, bootstrap response = master envelope + versions + `change_cursor` (NOT recovery envelope, NOT device list). `POST /api/v1/recovery/enroll-device` 201 returns `{ vault_id, device_id, device_token, recovery_envelope, created_at }`.
+5. Write `openapi.yaml` (machine-readable mirror of `docs/backend/api-spec.md`): all 9 endpoints, request/response shapes, auth (device token; token+Ed25519 signature where required), size caps, error `code/message/retryable` envelope, `429` + `Retry-After`, bootstrap response = master envelope + versions + `change_cursor` (NOT recovery envelope, NOT device list). `POST /api/v1/recovery/enroll-device` 201 returns `{ vault_id, device_id, device_token, recovery_envelope, created_at }`.
 6. Write `docs/export-format.md` + `docs/recovery-kit-format.md`.
 7. Add contract-drift CI check (frontend types vs `openapi.yaml` — fail on drift; exact tool up to builder, e.g. openapi-typescript + typecheck).
 
 ## Acceptance Criteria
 
-- [ ] `openapi.yaml` covers all 9 §11 endpoints with Appendix A codes + HTTP mappings; reviewed + frozen (M3 gate artifact delivered early). `docs/api-spec.md` is normative human source; `openapi.yaml` is machine-readable mirror.
+- [ ] `openapi.yaml` covers all 9 §11 endpoints with Appendix A codes + HTTP mappings; reviewed + frozen (M3 gate artifact delivered early). `docs/backend/api-spec.md` is normative human source; `openapi.yaml` is machine-readable mirror.
 - [ ] D1 row-size validation gate: verify 384 KiB ciphertext fits D1 row; if limit lower, lower plaintext cap + API + UI together (foundations schema + pwa verify).
 - [ ] Error enum has exactly the 18 frozen codes; adding one requires a contract rev (documented).
 - [ ] D1 migration includes single-active-ticket partial unique index; Dexie schema has zero plaintext-content columns.
@@ -69,7 +69,7 @@ OUT: any UI, any crypto implementation, any Worker code, any sync logic. Those a
 
 - Merge order: **1st** (after docs-split; all code plans depend on it). Full order: docs-split → foundations → ui-shell → crypto → sync → pwa-release.
 - Sibling overlaps: `crypto-local-vault` and `cloud-sync-pairing` READ these files but must not edit frozen fields — edits here after freeze = contract rev + notify all siblings. `pwa-hardening-release` reads limits/errors only.
-- If `openapi.yaml` path disputed (`docs/api-spec.md` vs root `openapi.yaml`): resolved — `docs/api-spec.md` is normative human source (owned by docs-split), `openapi.yaml` is machine-readable mirror (owned by foundations), kept in sync by drift CI. Precedence: PRD > api-spec.md > openapi.yaml > code.
+- If `openapi.yaml` path disputed (`docs/backend/api-spec.md` vs root `openapi.yaml`): resolved — `docs/backend/api-spec.md` is normative human source (owned by docs-split), `openapi.yaml` is machine-readable mirror (owned by foundations), kept in sync by drift CI. Precedence: PRD > api-spec.md > openapi.yaml > code.
 
 ## Delegation Strategy
 

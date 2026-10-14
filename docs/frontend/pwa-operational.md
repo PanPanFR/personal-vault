@@ -378,7 +378,7 @@ Continuous polling is strictly prohibited to preserve free-tier request and CPU 
 1. **Pre-Deployment Verification:**
    - Execute production build: `npm run build`.
    - Verify CSP headers: ensure `functions/_headers` contains the exact SHA-256 hash of the generated WASM binary and `'wasm-unsafe-eval'`.
-   - Run API contract drift check against `docs/api-spec.md`.
+   - Run API contract drift check against `docs/backend/api-spec.md`.
 2. **Apply Database Migrations (if applicable):**
    - Review versioned SQL migration under `migrations/`.
    - Apply to staging/dev database first: `npx wrangler d1 migrations apply personal-vault-dev-db --local=false`.
@@ -471,7 +471,7 @@ Continuous polling is strictly prohibited to preserve free-tier request and CPU 
 
 Prior to entering personal release soak, all Milestone 1 through 5 gates must be certified passing:
 
-- [ ] **Contract Drift Gate (M3):** CI verifies frontend/backend parity against `docs/api-spec.md`.
+- [ ] **Contract Drift Gate (M3):** CI verifies frontend/backend parity against `docs/backend/api-spec.md`.
 - [ ] **WASM Integrity Gate (M2, M5):** Pinned binary hash verified in CSP; blocked-WASM failure halts safely.
 - [ ] **Two-Build SW Update Gate (M5):** Production consecutive builds update without stale-shell hazards.
 - [ ] **iOS Eviction Gate (M5):** Clean start after simulated eviction verified on real iOS Safari device.

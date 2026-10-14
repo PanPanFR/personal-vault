@@ -11,7 +11,7 @@ Reorganize the flat `docs/` directory into category folders (frontend/backend/se
 ## Context
 - Repo root contains many `docs/*.md` files consumed by plans/PRD.
 - Existing `docs/adr/` already category folder precedent.
-- Plans reference paths like `docs/api-spec.md`, `docs/ui-ux.md` extensively.
+- Plans reference paths like `docs/backend/api-spec.md`, `docs/frontend/ui-ux.md` extensively.
 - Need a one-shot mechanical move + reference rewrite to avoid drift.
 
 ## Files / Areas Likely Affected
@@ -61,17 +61,17 @@ docs/
 ## Path Mapping
 | Old | New |
 |-----|-----|
-| docs/DESIGN.md | docs/frontend/DESIGN.md |
-| docs/ui-ux.md | docs/frontend/ui-ux.md |
-| docs/pwa-operational.md | docs/frontend/pwa-operational.md |
-| docs/api-spec.md | docs/backend/api-spec.md |
-| docs/architecture.md | docs/backend/architecture.md |
-| docs/data-model.md | docs/backend/data-model.md |
-| docs/crypto-spec.md | docs/backend/crypto-spec.md |
-| docs/sync-protocol.md | docs/backend/sync-protocol.md |
-| docs/device-pairing-recovery.md | docs/backend/device-pairing-recovery.md |
-| docs/security-threat-model.md | docs/security/security-threat-model.md |
-| docs/acceptance.md | docs/product/acceptance.md |
+| docs/frontend/DESIGN.md | docs/frontend/DESIGN.md |
+| docs/frontend/ui-ux.md | docs/frontend/ui-ux.md |
+| docs/frontend/pwa-operational.md | docs/frontend/pwa-operational.md |
+| docs/backend/api-spec.md | docs/backend/api-spec.md |
+| docs/backend/architecture.md | docs/backend/architecture.md |
+| docs/backend/data-model.md | docs/backend/data-model.md |
+| docs/backend/crypto-spec.md | docs/backend/crypto-spec.md |
+| docs/backend/sync-protocol.md | docs/backend/sync-protocol.md |
+| docs/backend/device-pairing-recovery.md | docs/backend/device-pairing-recovery.md |
+| docs/security/security-threat-model.md | docs/security/security-threat-model.md |
+| docs/product/acceptance.md | docs/product/acceptance.md |
 
 ## Acceptance Criteria
 - All docs files reachable at new paths.

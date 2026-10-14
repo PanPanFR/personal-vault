@@ -20,7 +20,7 @@ Release progress is gated on explicit exit criteria defined in PRD §15.
 - [ ] **Dexie and D1 migration definitions aligned** `[§15 M1, §10]`: Dexie schema (`src/db/dexie-schema.ts`) and D1 initial migration (`migrations/0001_init.sql`) contain zero plaintext content columns and include the partial unique index for single active pairing tickets.
 
 ### Milestone 3 Gate: API Contract Review & Freeze (§15 M3, G1)
-- [ ] **Machine-readable API contract committed and frozen** `[§15 M3, §11, §20 G1]`: Complete contract (`openapi.yaml` / `docs/api-spec.md`) covering all 9 endpoints in §11, all 18 Appendix A error codes with HTTP status mappings, request/response bodies, authentication schemes (`PV-Device`), and size limits.
+- [ ] **Machine-readable API contract committed and frozen** `[§15 M3, §11, §20 G1]`: Complete contract (`openapi.yaml` / `docs/backend/api-spec.md`) covering all 9 endpoints in §11, all 18 Appendix A error codes with HTTP status mappings, request/response bodies, authentication schemes (`PV-Device`), and size limits.
 - [ ] **No Milestone 4 work without contract review** `[§15 M3, §20 G1]`: Sync, conflict, and backup development blocked until contract is reviewed.
 - [ ] **Contract-drift CI guard active** `[§14.5, §15 M3, §20 G1]`: CI workflow fails on any drift between frontend types and backend API contract.
 
@@ -132,7 +132,7 @@ Traceability matrix linking every PRD v2.0 → v3.0 gap fix to its normative req
 
 | Gap ID | Description | PRD v3 Normative Section | Owning Plan | Verification Location & Artifact |
 |:---:|---|---|:---:|---|
-| **G1** | API contract drift risk | §11, §15 M3 exit gate, §14.5 | `foundations` | `docs/api-spec.md` & `openapi.yaml`; contract-drift CI step in CI workflow fails on mismatched types. |
+| **G1** | API contract drift risk | §11, §15 M3 exit gate, §14.5 | `foundations` | `docs/backend/api-spec.md` & `openapi.yaml`; contract-drift CI step in CI workflow fails on mismatched types. |
 | **G2** | Argon2id calibration baseline missing | §FR-6 (table), §14.2 | `crypto` | `tests/crypto/argon2.test.ts`; known-answer vectors for Min (64 MiB/t3/p1) and Recommended (128 MiB/t4/p1); floor/ceiling rejection assertions. |
 | **G3** | New-device pairing bootstrap undefined | §FR-5 (4-step sequence), §10, §14.3 | `sync` | `tests/api/pairing.test.ts` & E2E harness; 256-bit ticket hash lookup, 5-min expiry, single-active-ticket constraint, atomic consumption. |
 | **G4** | Stable API error codes undefined | Appendix A (18 codes), §11, §14.5 | `foundations` / `sync` | `src/lib/errors.ts` (18-code enum), `tests/api/errors.test.ts` ensuring exact HTTP status mappings and zero SQL/trace leakage in responses. |

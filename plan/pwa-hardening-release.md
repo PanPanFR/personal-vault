@@ -29,7 +29,7 @@ OUT: schemas, crypto primitives, sync protocol internals. Those are siblings —
 - `src/sw.ts` / `public/sw.js` + `src/sw-update.ts` (NEW — versioned caches, lifecycle, notice/prompt)
 - `src/pages/Settings*`, `src/components/BackupBanner*`, `src/components/SyncStatus*` (NEW/EDIT — only plan allowed to finalize Settings copy). Note: "theme default = system preference (prefers-color-scheme), locale default = device locale fallback ID" — previous draft typo said "theme default = device locale".
 - `functions/_headers` or Pages header config (NEW — CSP/nosniff/referrer/frames + WASM hash)
-- `docs/setup-recovery-appendix.md` (NEW — operational appendix only; `docs/security-threat-model.md` and `docs/pwa-operational.md` owned by docs-split, not duplicated here; this plan adds deployment-specific runbook content as an appendix)
+- `docs/setup-recovery-appendix.md` (NEW — operational appendix only; `docs/security/security-threat-model.md` and `docs/frontend/pwa-operational.md` owned by docs-split, not duplicated here; this plan adds deployment-specific runbook content as an appendix)
 - `package.json` + lockfile, CI workflow (EDIT — pin, audit, prod-build checks)
 - Deploy config (Pages project + D1 bindings dev/prod)
 
@@ -40,7 +40,7 @@ OUT: schemas, crypto primitives, sync protocol internals. Those are siblings —
 3. Apply + verify prod headers (CSP incl. pinned WASM hash, nosniff, no-referrer, frames) + no-third-party-scripts + no-remote-CDN audit + snippet/note text-only rendering (no executable HTML) + no-arbitrary-URL-fetch recheck.
 4. Implement iOS handling (persistent Settings/export banner until `last_export_at` set, eviction clean-start test on real iOS Safari, relaunch/keyboard/clipboard/lifecycle checks on real Android + iOS + desktop Chromium).
 5. Wire sync triggers + quota UX (60-s foreground while unlocked, debounce bursts, batch; quota-503 → sync-paused + local-usable + retry; never "synced" pre-ack) + finalize Settings (devices with server last-seen + rename, storage status, version/privacy/limitations copy).
-6. Pin/audit deps, run full §14 sweep (incl. 5,000-record + 200 ms p95 measurement, blocked-WASM, oversize, 429 matrix, export/restore clean-device, pair/revoke/recover-all-lost), write `docs/setup-recovery-appendix.md` (deployment-specific runbook; references docs-split's `docs/security-threat-model.md` and `docs/pwa-operational.md` — does not duplicate them).
+6. Pin/audit deps, run full §14 sweep (incl. 5,000-record + 200 ms p95 measurement, blocked-WASM, oversize, 429 matrix, export/restore clean-device, pair/revoke/recover-all-lost), write `docs/setup-recovery-appendix.md` (deployment-specific runbook; references docs-split's `docs/security/security-threat-model.md` and `docs/frontend/pwa-operational.md` — does not duplicate them).
 7. Deploy pages.dev + prod D1, confirm quotas + limit-enforcement behavior docs rechecked, soak with non-critical data before real credentials.
 
 ## Acceptance Criteria
