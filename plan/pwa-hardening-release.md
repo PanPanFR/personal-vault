@@ -6,7 +6,7 @@ Turn the working vault into an installable, hardened, cross-device-tested person
 
 ## Scope
 
-IN: manifest + icons + install guidance (usable-in-browser fallback); SW versioned cache per build, `skipWaiting`+`clientsClaim`-or-prompt strategy, old-cache purge, two-build stale-shell/API test; cache rules (app-shell only, API no-store, no plaintext API in SW/Cache); headers (restrictive CSP with minimum `wasm-unsafe-eval` + pinned WASM hash, `nosniff`, `no-referrer`, frames); dependency pin/lockfile/audit + crypto-upgrade review rule; App B enforcement verification in prod build; Settings (lock timeout 1/5/15/30 default 5, theme light/dark, locale ID/EN switch per user decision, storage/offline status + pending + last-sync + last-error, device list with server-recorded last-seen + rename + revoke, export/import/rotation/recovery guidance, version + privacy notes + limitations); iOS ITP handling (~7-day eviction note, aggressive export banner on iOS until export exists, eviction→clean-start→pairing/recovery offer, real-device test); sync triggers (open/unlock, post-mutation debounced, manual retry, 60-s foreground interval while unlocked, no polling); quota-paused UX + local-usable guarantee; full §14 acceptance sweep; deploy (dev+prod D1 separate, versioned migrations, backup-before-migration, no CDN caching of vault API); runbooks (setup, deploy, migrate, backup, recovery, incident) + threat-model/privacy page; personal-release soak on non-critical data.
+IN: manifest + icons + install guidance (usable-in-browser fallback); SW versioned cache per build, `skipWaiting`+`clientsClaim`-or-prompt strategy, old-cache purge, two-build stale-shell/API test; cache rules (app-shell only, API no-store, no plaintext API in SW/Cache); headers (restrictive CSP with minimum `wasm-unsafe-eval` + pinned WASM hash, `nosniff`, `no-referrer`, frames); dependency pin/lockfile/audit + crypto-upgrade review rule; App B enforcement verification in prod build; Settings (lock timeout 1/5/15/30 default 5, theme light/dark, locale ID/EN switch per user decision, storage/offline status + pending + last-sync + last-error, device list with server-recorded last-seen + rename + revoke, export/import/rotation/recovery guidance, version + privacy notes + limitations); iOS ITP handling (~7-day eviction note, aggressive export banner on iOS until export exists, eviction→clean-start→pairing/recovery offer, real-device test); sync triggers (open/unlock, post-mutation debounced, manual retry, 60-s foreground interval while unlocked = supplementary not polling; ~15 calls/hour vs App B limit 300 GET/vault/hour, debounced bursts); quota-paused UX + local-usable guarantee; full §14 acceptance sweep; deploy (dev+prod D1 separate, versioned migrations, backup-before-migration, no CDN caching of vault API); runbooks (setup, deploy, migrate, backup, recovery, incident) + threat-model/privacy page; personal-release soak on non-critical data.
 OUT: schemas, crypto primitives, sync protocol internals. Those are siblings — this plan consumes them.
 
 ## Context
@@ -27,9 +27,9 @@ OUT: schemas, crypto primitives, sync protocol internals. Those are siblings —
 
 - `public/manifest.webmanifest`, `public/icons/*`, `index.html` (NEW/EDIT — installability)
 - `src/sw.ts` / `public/sw.js` + `src/sw-update.ts` (NEW — versioned caches, lifecycle, notice/prompt)
-- `src/pages/Settings*`, `src/components/BackupBanner*`, `src/components/SyncStatus*` (NEW/EDIT — only plan allowed to finalize Settings copy)
+- `src/pages/Settings*`, `src/components/BackupBanner*`, `src/components/SyncStatus*` (NEW/EDIT — only plan allowed to finalize Settings copy). Note: "theme default = system preference (prefers-color-scheme), locale default = device locale fallback ID" — previous draft typo said "theme default = device locale".
 - `functions/_headers` or Pages header config (NEW — CSP/nosniff/referrer/frames + WASM hash)
-- `docs/runbooks.md`, `docs/threat-model.md`, `docs/setup-recovery.md` (NEW)
+- `docs/setup-recovery-appendix.md` (NEW — operational appendix only; `docs/security-threat-model.md` and `docs/pwa-operational.md` owned by docs-split, not duplicated here; this plan adds deployment-specific runbook content as an appendix)
 - `package.json` + lockfile, CI workflow (EDIT — pin, audit, prod-build checks)
 - Deploy config (Pages project + D1 bindings dev/prod)
 
@@ -40,14 +40,14 @@ OUT: schemas, crypto primitives, sync protocol internals. Those are siblings —
 3. Apply + verify prod headers (CSP incl. pinned WASM hash, nosniff, no-referrer, frames) + no-third-party-scripts + no-remote-CDN audit + snippet/note text-only rendering (no executable HTML) + no-arbitrary-URL-fetch recheck.
 4. Implement iOS handling (persistent Settings/export banner until `last_export_at` set, eviction clean-start test on real iOS Safari, relaunch/keyboard/clipboard/lifecycle checks on real Android + iOS + desktop Chromium).
 5. Wire sync triggers + quota UX (60-s foreground while unlocked, debounce bursts, batch; quota-503 → sync-paused + local-usable + retry; never "synced" pre-ack) + finalize Settings (devices with server last-seen + rename, storage status, version/privacy/limitations copy).
-6. Pin/audit deps, run full §14 sweep (incl. 5,000-record + 200 ms p95 measurement, blocked-WASM, oversize, 429 matrix, export/restore clean-device, pair/revoke/recover-all-lost), write runbooks + threat-model page.
+6. Pin/audit deps, run full §14 sweep (incl. 5,000-record + 200 ms p95 measurement, blocked-WASM, oversize, 429 matrix, export/restore clean-device, pair/revoke/recover-all-lost), write `docs/setup-recovery-appendix.md` (deployment-specific runbook; references docs-split's `docs/security-threat-model.md` and `docs/pwa-operational.md` — does not duplicate them).
 7. Deploy pages.dev + prod D1, confirm quotas + limit-enforcement behavior docs rechecked, soak with non-critical data before real credentials.
 
 ## Acceptance Criteria
 
 - [ ] Install + relaunch green on desktop Chromium, real Android, real iOS Safari; browser-fallback usable where install unavailable.
 - [ ] Two-build SW update never serves stale shell against new API; old caches purged.
-- [ ] SW/Cache/HTTP never hold plaintext API responses (assert in prod-build test).
+- [ ] SW/Cache/HTTP never hold plaintext API responses (assert in prod-build test). Oversized-record check includes D1 row-size gate (384 KiB ceiling).
 - [ ] CSP/headers verified on prod build incl. WASM hash; audit clean; no remote runtime deps.
 - [ ] iOS eviction → clean start + pairing/recovery offer, no corrupt half-vault; iOS banner persists until export.
 - [ ] Quota exhaustion → local fully usable, outbox durable, sync-paused message + retry.
@@ -65,9 +65,9 @@ OUT: schemas, crypto primitives, sync protocol internals. Those are siblings —
 
 ## Integration Notes (merge order vs sibling plans, likely file overlaps)
 
-- Merge order: **4th / last** (after foundations → crypto → sync).
+- Merge order: **5th / last** (after docs-split → foundations → ui-shell → crypto → sync).
 - Sibling overlaps: exclusive owner of SW/manifest/headers/Settings-copy/runbooks — no other plan writes these. Reads sync status hooks + lock/i18n keys; any string-key rename must land before this plan's copy-freeze. Overlap risk on `index.html` (SW registration vs crypto CSP meta) — this plan owns the final header/meta reconciliation.
-- `/integrate` order: foundations → crypto → sync → this plan; full suite + real-device checks after merge; remove `plan/*.md` on green.
+- `/integrate` order: docs-split → foundations → ui-shell → crypto → sync → this plan; full suite + real-device checks after merge; remove `plan/*.md` on green.
 
 ## Delegation Strategy
 
@@ -75,10 +75,12 @@ OUT: schemas, crypto primitives, sync protocol internals. Those are siblings —
 |------|-------|----------------|-----|
 | 1 manifest/install + a11y/theme/locale | designer | A | UI system work, separate files, parallel to 2 |
 | 2 SW lifecycle + cache rules | builder | A | Isolated SW files, parallel to 1 |
-| 3 headers/CSP/audit/rendering | reviewer | — | Read-only security pass after 1–2, before 4 |
+| 3 headers/CSP/audit/rendering | builder | — | Inline: applies headers + CSP config, after 1-2 |
+| 3b headers/CSP verify | reviewer | — | Read-only security audit after builder applies headers |
 | 4 iOS eviction + real-device matrix | tester | B | Device lab work, parallel to 5 |
 | 5 sync triggers + quota UX + Settings finalize | builder | B | App code, parallel to 4 |
-| 6 dep pin/audit + §14 sweep + runbooks | documenter | C | Docs + checklist, parallel to 7 |
-| 7 deploy + quota confirm + soak | builder | C | Ops, parallel to 6 (different surface: dashboard vs docs) |
+| 6 dep pin/audit + §14 sweep | builder | C | Inline: lockfile/audit/checklist, parallel to 7 |
+| 6b runbooks + threat-model docs | documenter | C | Docs-only, parallel to 6 |
+| 7 deploy + quota confirm + soak | builder | C | Ops, parallel to 6b (different surface: dashboard vs docs) |
 
-Batch A = steps 1+2; B = 4+5; C = 6+7. Reviewer read-only at step 3 + final §14 sign-off. Bulk header/meta edits across routes via one shell script inline, never split.
+Batch A = steps 1+2; B = 4+5; C = 6+6b+7. Reviewer read-only at step 3b + final §14 sign-off (never writes headers/config). Builder owns dep pin/audit/sweep; documenter owns runbooks/threat-model docs only. Bulk header/meta edits across routes via one shell script inline, never split.

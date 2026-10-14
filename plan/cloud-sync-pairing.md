@@ -6,7 +6,7 @@ Build the same-origin Pages Functions API + D1 backend and the client sync/pairi
 
 ## Scope
 
-IN: all 9 endpoints (§11 table) per frozen `openapi.yaml`; SHA-256-hashed device tokens (raw once) + Ed25519 signatures binding method|path|timestamp|nonce-or-mutation-ID|body-SHA256 with ±5-min window, `X-Server-Time` on every response, idempotency/replay guards; 4-step pairing (ticket create → exchange → bootstrap+unlock → initial sync from cursor=0), 256-bit tickets, hash-only, 5-min expiry, single-active-ticket, atomic consume; bootstrap = master envelope + versions + `change_cursor` (no recovery envelope/device list); recovery enroll (auth-token only, strict limits) returning raw token once then bootstrap separately; revocation immediate + idempotent; `crypto-metadata` atomic envelope replace + version check; sync algorithm §11 steps 1–10 (bounded pages, stable int cursor, Dexie-txn commit, `(record_id, revision, change_seq)` idempotent re-apply, CAS + `409 REVISION_CONFLICT` with server ciphertext, outbox durable until ack, 50-mutation/1-MiB-ciphertext-byte caps, no-store headers); conflict UI (Keep-local-as-new + Use-remote minimum; delete-vs-edit = manual choice per user decision; never LWW/resurrect silently); tombstones NULL-ciphertext retained (no MVP purge); App B rate limits with `429` + `Retry-After`; export/import (`personal-vault-export-YYYYMMDD.json`, preview + merge/restore choice, clean-device restore); quota-exhausted local-usable + sync-paused UX.
+IN: all 9 endpoints (§11 table) per frozen `openapi.yaml`; SHA-256-hashed device tokens (raw once) + Ed25519 signatures binding method|path|timestamp|nonce-or-mutation-ID|body-SHA256 with ±5-min window, `X-Server-Time` on every response, idempotency/replay guards; 4-step pairing (ticket create → exchange → bootstrap+unlock → initial sync from cursor=0), 256-bit tickets, hash-only, 5-min expiry, single-active-ticket, atomic consume; bootstrap = master envelope + versions + `change_cursor` (no recovery envelope/device list); recovery enroll (`POST /api/v1/recovery/enroll-device`) 201 response returns `{ vault_id, device_id, device_token, recovery_envelope, created_at }` — this is the only path that delivers recovery_envelope (resolves PRD §FR-7 step 3 "downloads encrypted envelopes" plural, avoids exposing recovery material to regular-pairing devices); revocation immediate + idempotent; `crypto-metadata` atomic envelope replace + version check; sync algorithm §11 steps 1–10 (bounded pages, stable int cursor, Dexie-txn commit, `(record_id, revision, change_seq)` idempotent re-apply, CAS + `409 REVISION_CONFLICT` with server ciphertext, outbox durable until ack, 50-mutation/1-MiB-ciphertext-byte caps, no-store headers); conflict UI (Keep-local-as-new + Use-remote minimum; delete-vs-edit = manual choice per user decision; never LWW/resurrect silently); tombstones NULL-ciphertext retained (no MVP purge); App B rate limits with `429` + `Retry-After`; export/import (`personal-vault-export-YYYYMMDD.json`, preview + merge/restore choice, clean-device restore); quota-exhausted local-usable + sync-paused UX.
 OUT: crypto primitives, lock/timeout, search index, PWA shell/SW, deploy. Those are siblings.
 
 ## Context
@@ -51,7 +51,7 @@ OUT: crypto primitives, lock/timeout, search index, PWA shell/SW, deploy. Those 
 - [ ] Two-device edits converge with no silent overwrite; delete-vs-edit shows manual dialog; duplicates/retries idempotent; tombstones never resurrect; pagination never skips under concurrent writes.
 - [ ] Crash-between-write-and-cursor re-apply upserts cleanly (fault-injection test).
 - [ ] Every App B limit returns `429 RATE_LIMITED` + `Retry-After` then recovers; UI distinguishes rate-limited from quota-exhausted.
-- [ ] Oversize: 256 KiB+1 rejected identically client+server; 384 KiB ciphertext ceiling enforced; batch over 50/1 MiB rejected/split.
+- [ ] Oversized-record test: 256 KiB plaintext accepted, 256 KiB + 1 byte rejected identically on client and server; 384 KiB ciphertext ceiling respected; D1 row-size gate passes (verify 384 KiB fits row — lower cap + API + UI together if not).
 - [ ] Export restores to clean profile via passphrase AND via recovery secret; import to non-empty never silently overwrites.
 
 ## Verification / Tests
@@ -66,7 +66,7 @@ OUT: crypto primitives, lock/timeout, search index, PWA shell/SW, deploy. Those 
 
 ## Integration Notes (merge order vs sibling plans, likely file overlaps)
 
-- Merge order: **3rd**, after foundations + crypto (needs both; may scaffold against fixtures earlier).
+- Merge order: **4th**, after foundations + ui-shell + crypto (needs all; may scaffold against fixtures earlier). Full order: docs-split → foundations → ui-shell → crypto → sync → pwa-release.
 - Sibling overlaps: owns `functions/`, `src/sync|pairing|devices|recovery|backup/` exclusively — no other plan writes there. Reads `src/crypto/*` + contract read-only. If a D1 column is missing, request it via foundations contract rev (do not freelance a `0002` without review). `pwa-hardening-release` tests quota/eviction against this plan's sync-paused UX — freeze the `QUOTA_EXHAUSTED` vs `RATE_LIMITED` UI strings here.
 
 ## Delegation Strategy
@@ -76,10 +76,11 @@ OUT: crypto primitives, lock/timeout, search index, PWA shell/SW, deploy. Those 
 | 1 auth middleware | builder | — | Inline: security-critical core, needs full context |
 | 2 vault+bootstrap+metadata | builder | — | Inline: same auth context as 1 |
 | 3 pairing/exchange/revoke/enroll | builder | — | Inline: same device-trust context |
-| 4 sync endpoints + rate limits | tester | A | Test-heavy (429 matrix, CAS, idempotency), parallel to 5 |
+| 4 sync endpoints + rate limits | builder | A | Inline: API implementation, parallel to 5 |
 | 5 client sync engine | builder | A | Separate `src/sync/*`, parallel to 4 |
 | 6 conflict UI | designer | B | Dialog UX + a11y, after engine shapes settle |
 | 7 export/import + quota UX | builder | B | Parallel to 6, separate `src/backup/*` |
+| Sync/rate-limit test matrix | tester | — | Test suite (429 matrix, CAS, idempotency) after steps 4-5 |
 | Auth+sync audit | reviewer | — | Read-only security review last (token-alone-negatives, log scan) |
 
-Batch A = steps 4+5 together. Batch B = steps 6+7 together. Reviewer read-only. Mechanical bulk work (e.g. applying `X-Server-Time`/no-store headers across routes) via one shell script inline, never split.
+Batch A = steps 4+5 together (builder owns both, disjoint dirs `functions/` vs `src/sync/`). Batch B = steps 6+7 together. Tester writes test suite after implementation (never writes prod API code). Reviewer read-only. Mechanical bulk work (e.g. applying `X-Server-Time`/no-store headers across routes) via one shell script inline, never split.

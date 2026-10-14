@@ -15,7 +15,7 @@ OUT: API/Worker, D1, sync protocol, pairing endpoints, service worker, deploy. T
 - PRD: FR-6, FR-7 (kit + flow steps 1–6), FR-2 (search), FR-8 (clipboard/mask), §2(11) crypto-blocking, §9(4) CSP/WASM, Appendix D vectors.
 - Consumes (read-only): `plan/foundations-schemas-contract.md` outputs — envelope field names, version constants, 256 KiB guard, error codes `CRYPTO_VERSION_UNSUPPORTED`/`VERSION_MISMATCH`. Do not rename frozen fields.
 - User decisions: min passphrase 8; bilingual UI; auto device label (used when wrapping local creds, no UX here).
-- Technical defaults: outbox payloads use same `PV-V1/REC-ENC` subkey (staged record ciphertext); `localStorage` holds only lock-epoch int, cleared on lock.
+- Technical defaults: outbox payloads use same `PV-V1/REC-ENC` subkey (staged record ciphertext — not a new purpose, same SK for identical plaintext bytes; still counted as `PV-V1/REC-ENC` regardless of stage); `localStorage` holds only lock-epoch int, cleared on lock.<|end|><|start|>edit to=assistant<|channel|>analysis<|message|>Edited plan/crypto-local-vault.md (1 replacement)
 - Jev verify: tier HIGH (`decision_risk` failure-impact 0.96, conf 0.92; `proceed` 0.31, `needs_human` 0.74 — below strict bar). **Needs human confirm:** Argon2id Recommended 128 MiB/t4 may take >3 s on low-end Android → auto fallback to 64 MiB/t3 is the plan; confirm you accept auto-fallback (vs forcing 128 MiB everywhere). Proceeding with flag; builder must not weaken below floor or raise above cap without a `kdf_version` bump + fixtures.
 
 ## Dependencies
@@ -65,7 +65,7 @@ OUT: API/Worker, D1, sync protocol, pairing endpoints, service worker, deploy. T
 
 ## Integration Notes (merge order vs sibling plans, likely file overlaps)
 
-- Merge order: **2nd**, after foundations.
+- Merge order: **3rd**, after foundations + ui-shell. Full order: docs-split → foundations → ui-shell → crypto → sync → pwa-release.
 - Sibling overlaps: `cloud-sync-pairing` consumes envelopes/ciphertext shapes — no file overlap if it only imports `src/crypto/*` read-only. Dexie schema owned by foundations; this plan adds helpers only. `pwa-hardening-release` consumes lock/WASM-block/i18n — coordinate Settings keys (`lock_timeout`, `locale`) names now to avoid rename later.
 - Real dependency: do not start password-change/recovery UI strings final copy until bilingual dictionary keys freeze here.
 
@@ -77,9 +77,10 @@ OUT: API/Worker, D1, sync protocol, pairing endpoints, service worker, deploy. T
 | 2 Argon2id + envelopes | builder | — | Inline: core crypto, sequential after 1 |
 | 3 record enc/AAD/HKDF/compat | builder | — | Inline: same crypto context as 2 |
 | 4 lifecycle (create/unlock/lock/change/kit) | builder | — | Inline: needs steps 1–3 context |
-| 5 encrypted IDB helpers | reviewer | A | Read-only audit: no-plaintext-at-rest check, parallel to 6 |
+| 5 encrypted IDB helpers | builder | A | Inline: writes encrypted read/write helpers, parallel to 6 |
 | 6 search + query parser | builder | A | Separate files (`src/search/*`), parallel to 5 |
 | 7 credential/clipboard/passphrase/i18n UX | designer | B | UI strings + mask/reveal/a11y, after crypto settled |
 | Fixtures + unit tests | tester | B | Parallel with 7, isolated `tests/` |
+| No-plaintext-at-rest audit | reviewer | — | Read-only audit after steps 5-6, before merge |
 
-Batch A = steps 5+6 together. Batch B = step 7 + tester together. Reviewer read-only. Bulk fixture generation (if many vectors) via one shell script inline, never split across subagents.
+Batch A = steps 5+6 together. Batch B = step 7 + tester together. Reviewer read-only (audits after steps 5-6, never writes code). Bulk fixture generation (if many vectors) via one shell script inline, never split across subagents.
