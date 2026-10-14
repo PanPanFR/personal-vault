@@ -20,6 +20,27 @@ OUT: real encryption/decryption (crypto plan); sync engine/API calls (cloud-sync
 - Jev delegation: `owner` designer 0.81 conf 0.76. `needs_subagent` 0.52 UNCERTAIN → inline default. `can_parallel` 0.62 UNCERTAIN → sequential unless noted.
 - Jev verify: tier MID (`decision_risk` conf 0.38 UNCERTAIN → MID; `proceed` 0.61, `needs_human` 0.63). Risk noted: constraint-fit 0.30 — scope boundaries with crypto/sync plans must be precise. Proceeding.
 
+## Frontend Skills, Tooling & MCP (read before execution)
+- Load selectively (not all): `ui-design`, `shadcn`, `ui-ux-pro-max`, `antislop`, `web-design-guidelines`, `impeccable`, `vercel-react`, `vite`, `web-perf`, and `pwa-development` only where relevant.
+- Styling source of truth: `docs/frontend/DESIGN.md` (Catppuccin Latte/Mocha tokens). Do not reuse stale Notion colors.
+- Component acquisition default: skills + CLI (`npx shadcn@latest add ...`). Use UI MCPs only when genuine discovery is needed; registered UI MCPs are `shadcn`, `reactbits`, `magicuidesign-mcp`, `chrome-devtools`.
+- MCP standby handling: if a needed MCP is disabled (`"disabled": true`), ask user to enable it in `opencode.json` and run `/reload`; remind to re-disable after the task.
+- Browser verification: use `playwright-cli` for scripted flows/snapshots/videos/E2E; use `chrome-devtools` MCP for one-off live debug, screenshot, perf trace, console errors.
+
+## Jev Gates (mandatory, no slash)
+- Before substantial UI work: `node ~/.config/opencode/skills/jev-decision/scripts/jev-decide.mjs -Preset ui -State "<request + screens>"`.
+- Execute directly only when `needs_designer <= 0.3` and every `ui_complexity` dimension max probability `<= 0.3`; otherwise route designer/plan path.
+- Run reviewer review gate + tester scope gate before final.
+- Script failure is fail-open: proceed with LLM judgment, never block.
+
+## Done Gate
+- Browser preview matches `docs/frontend/DESIGN.md`.
+- Responsive checks pass at 375px and 1280px.
+- No console errors; no blocking a11y violations.
+- `npx impeccable detect <path>` has no blocking findings.
+- Lighthouse/perf target >90 (or documented waiver).
+- Create/edit/delete/read CRUD flow works with fixtures.
+
 ## Dependencies
 
 - Requires: foundations schemas frozen (item types, Dexie schema, tag validator, version constants).
