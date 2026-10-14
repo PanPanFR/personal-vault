@@ -1,3 +1,7 @@
+// Frozen i18n key constants. ui-shell owns the original 50 keys; the crypto
+// plan APPENDS vault/lock/recovery/passphrase keys only — never renames.
+// Settings form field names (coordinated with pwa plan): `lock_timeout`,
+// `locale`. Storage mapping documented in src/vault/session.ts + src/i18n.
 export const I18N = {
   APP_NAME: "APP_NAME",
   DASHBOARD_TITLE: "DASHBOARD_TITLE",
@@ -52,6 +56,44 @@ export const I18N = {
   CONFIRM_DELETE: "CONFIRM_DELETE",
   HIDE: "HIDE",
   ADD: "ADD",
+  // --- crypto plan additions (frozen here) ---
+  PASSPHRASE_LABEL: "PASSPHRASE_LABEL",
+  PASSPHRASE_PLACEHOLDER: "PASSPHRASE_PLACEHOLDER",
+  PASSPHRASE_MIN_HINT: "PASSPHRASE_MIN_HINT",
+  PASSPHRASE_STRENGTH_WEAK: "PASSPHRASE_STRENGTH_WEAK",
+  PASSPHRASE_STRENGTH_FAIR: "PASSPHRASE_STRENGTH_FAIR",
+  PASSPHRASE_STRENGTH_STRONG: "PASSPHRASE_STRENGTH_STRONG",
+  OFFLINE_GUESS_NOTE: "OFFLINE_GUESS_NOTE",
+  UNLOCK: "UNLOCK",
+  LOCK_NOW: "LOCK_NOW",
+  LOCK_TIMEOUT_LABEL: "LOCK_TIMEOUT_LABEL",
+  LOCKED_TITLE: "LOCKED_TITLE",
+  LOCKED_DESC: "LOCKED_DESC",
+  WASM_FATAL_TITLE: "WASM_FATAL_TITLE",
+  WASM_FATAL_DESC: "WASM_FATAL_DESC",
+  RECOVERY_KIT_TITLE: "RECOVERY_KIT_TITLE",
+  RECOVERY_KIT_DOWNLOAD: "RECOVERY_KIT_DOWNLOAD",
+  RECOVERY_KIT_CONFIRM_LABEL: "RECOVERY_KIT_CONFIRM_LABEL",
+  RECOVERY_KIT_CONFIRMED: "RECOVERY_KIT_CONFIRMED",
+  RECOVERY_ROTATE_TITLE: "RECOVERY_ROTATE_TITLE",
+  RECOVERY_ROTATE_CONFIRM: "RECOVERY_ROTATE_CONFIRM",
+  PASSWORD_CHANGE_TITLE: "PASSWORD_CHANGE_TITLE",
+  PASSWORD_CHANGE_DISCLOSURE_OLD_BACKUP: "PASSWORD_CHANGE_DISCLOSURE_OLD_BACKUP",
+  PASSWORD_CHANGE_DISCLOSURE_RECOVERY_KEPT: "PASSWORD_CHANGE_DISCLOSURE_RECOVERY_KEPT",
+  PASSWORD_CHANGE_DISCLOSURE_ROTATE_ADVICE: "PASSWORD_CHANGE_DISCLOSURE_ROTATE_ADVICE",
+  CLIPBOARD_RETENTION_WARNING: "CLIPBOARD_RETENTION_WARNING",
+  CLIPBOARD_COPIED: "CLIPBOARD_COPIED",
+  LOCALE_LABEL: "LOCALE_LABEL",
 } as const;
 
 export type I18nKey = (typeof I18N)[keyof typeof I18N];
+
+/**
+ * Settings form field names — frozen coordination with pwa-hardening-release.
+ * `lock_timeout`: minutes, one of 1/5/15/30 (default 5) -> app_metadata.
+ * `locale`: "en" | "id" -> localStorage `pv-locale`.
+ */
+export const SETTINGS_FIELD_LOCK_TIMEOUT = "lock_timeout" as const;
+export const SETTINGS_FIELD_LOCALE = "locale" as const;
+export const LOCALE_STORAGE_KEY = "pv-locale" as const;
+export type Locale = "en" | "id";

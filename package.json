@@ -15,7 +15,9 @@
   "dependencies": {
     "clsx": "^2.1.1",
     "dexie": "^4.0.0",
+    "libsodium-wrappers-sumo": "0.7.15",
     "lucide-react": "^0.468.0",
+    "minisearch": "7.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.0",
