@@ -3,7 +3,7 @@
 > **Normative Human Contract**  
 > This document is the authoritative, normative human-readable API contract for Personal Vault. The machine-readable `openapi.yaml` (maintained in the foundations plan) is a generated mirror kept strictly in sync with this specification by automated drift CI. **Never hand-edit both files independently; edits must originate in this document or be reconciled through an explicit contract revision.**  
 >  
-> **Normative Source:** `personal-vault-prd-v3.md` v3.0 (2026-10-13) in the repository root. On any discrepancy or conflict between this document and the PRD, the **PRD WINS**. Any discovered divergence is documented as a `> TODO(question): ...` marker and must never be resolved by silent reinterpretation.
+> **Normative Source:** `personal-vault-prd-v3.md` v3.0 (2026-10-13) in the repository root. On any discrepancy or conflict between this document and the PRD, the **PRD WINS**. Genuine ambiguities are tracked in `docs/product/acceptance.md` (Open Questions Register).
 
 ---
 
@@ -105,7 +105,7 @@ Signed requests must include the custom `PV-Device` header:
 PV-Device: device_id="<UUIDv4>", timestamp="<ISO-8601-UTC>", nonce="<UUIDv4>", signature="<base64url-ed25519-sig>"
 ```
 
-> TODO(question): PRD §FR-5 lines 224–226 specifies that mutations require both a valid device token and a signature binding method, path, timestamp, nonce, and body SHA-256, but leaves the exact header parameter syntax open. Plan `cloud-sync-pairing.md` proposed `Authorization: PV-Device <device_id>.<ts>.<nonce>.<sig_b64u>` while `docs-split.md` specified a separate custom `PV-Device` header paired with `Authorization: Bearer <token>`. This specification adopts the cleaner decoupled standard: `Authorization: Bearer <token>` for token identity + `PV-Device` header for cryptographic proof. Builder to confirm exact parser implementation.
+> Open question Q2: see Open Questions Register in `docs/product/acceptance.md`.
 
 #### Canonical Signing String Construction
 The Ed25519 signature is computed over the UTF-8 bytes of the following newline-delimited canonical string:
@@ -369,7 +369,7 @@ Creates a new personal vault, stores its master and recovery key envelopes, and 
 }
 ```
 
-> TODO(question): PRD §11 line 453 specifies "token hash only" for `POST /api/v1/vaults`, indicating the client generates the initial device bearer token and sends `SHA-256(token)`. In contrast, pairing exchange (§FR-5 line 238) and recovery enrollment generate the token server-side and return it in the response. If implementation standardizes on server-side token generation for all devices, the request omits `device_token_hash` and the response includes `device_token`.
+> Open question Q1: see Open Questions Register in `docs/product/acceptance.md`.
 
 #### Response `201 Created`
 ```json
@@ -567,7 +567,7 @@ Submits a batch of client-side encrypted mutations (creates, updates, and delete
 #### Revision Conflict (`409 REVISION_CONFLICT`)
 If any mutation fails its CAS revision check (`expected_revision != current_revision`), the entire batch transaction is rolled back and returns `409 REVISION_CONFLICT` containing the latest server record state (see §3.3).
 
-> TODO(question): In batch sync, if mutation 2 of 5 encounters a revision conflict, PRD §11 line 456 specifies "atomic DB writes", implying the transaction rolls back entirely and returns the 409 conflict payload for that record. The client must handle resolving the conflicting record and then resubmit remaining pending mutations. Confirm whether batch fails atomically on first conflict or processes partial non-conflicting mutations.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 #### Possible Error Responses
 - `400 VALIDATION_ERROR`: Body malformed, missing fields, or empty mutation list.
@@ -746,7 +746,7 @@ Updates the master-password key envelope (e.g. after a master passphrase change)
 }
 ```
 
-> TODO(question): PRD §11 lists the URL as `PUT /api/v1/vault/crypto-metadata` (singular `vault` without `:vaultId`), while bootstrap uses `GET /api/v1/vaults/:vaultId/bootstrap`. The server can resolve `vault_id` from the authenticated device token, or accept `vault_id` in path/body. For consistency with `/api/v1/sync`, resolving via the authenticated device token is adopted.
+> Open question Q3: see Open Questions Register in `docs/product/acceptance.md`.
 
 #### Response `200 OK`
 ```json
@@ -816,7 +816,7 @@ Called when **all previously authorized devices are lost**. Authorizes a clean d
 4. User sets a new master passphrase. Device wraps the DEK with new KDF parameters and updates master envelope via `PUT /api/v1/vault/crypto-metadata`.
 5. Device downloads changes from `cursor = 0` via `GET /api/v1/sync`.
 
-> TODO(question): PRD §FR-7 step 3 says "Client downloads encrypted envelopes and record ciphertext, then uses the recovery secret locally (PV-V1/RECOVERY-WRAP) to unwrap the DEK." However, `GET /api/v1/vaults/:vaultId/bootstrap` explicitly excludes the `recovery_envelope`. Does `POST /api/v1/recovery/enroll-device` return the `recovery_envelope` directly in its 201 response, or does bootstrap include `recovery_envelope` when invoked by a freshly recovery-enrolled device? Returning `recovery_envelope` directly in the `POST /api/v1/recovery/enroll-device` response is the safest, least stateful approach.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 #### Possible Error Responses
 - `400 VALIDATION_ERROR`: Missing fields or invalid UUID/ULID.
@@ -828,24 +828,24 @@ Called when **all previously authorized devices are lost**. Authorizes a clean d
 
 ## 7. Ambiguities & Open Questions Registry
 
-Every genuine PRD ambiguity identified during the creation of this specification is registered below with a `> TODO(question): ...` marker. Implementers must not guess or make unreviewed product changes.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
-1. **`> TODO(question): Initial device token generation on POST /api/v1/vaults`**  
+> Open question Q1: see Open Questions Register in `docs/product/acceptance.md`.
    *Context:* PRD §11 line 453 specifies "token hash only" for `POST /api/v1/vaults`, implying the client generates the initial device bearer token and sends `SHA-256(token)`. However, pairing exchange (§FR-5 line 238) and recovery enrollment generate tokens server-side and return the raw token once.  
    *Recommendation:* Standardize on server-side generation across all endpoints or confirm client-generated token on initial creation.
 
-2. **`> TODO(question): Header encapsulation for PV-Device signatures`**  
+> Open question Q2: see Open Questions Register in `docs/product/acceptance.md`.
    *Context:* PRD §FR-5 lines 224–226 requires both device token and Ed25519 signature. Plan `cloud-sync-pairing.md` proposed combining them into `Authorization: PV-Device <device_id>.<ts>.<nonce>.<sig_b64u>`, whereas `docs-split.md` specified `Authorization: Bearer <token>` paired with custom `PV-Device` header.  
    *Recommendation:* Use `Authorization: Bearer <token>` + `PV-Device: device_id="...", timestamp="...", nonce="...", signature="..."` for clean separation of identity and cryptographic assertion.
 
-3. **`> TODO(question): Atomic batch rollback vs partial mutation processing`**  
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
    *Context:* PRD §11 line 456 specifies "atomic DB writes", while conflict resolution (§FR-4) discusses handling revision conflicts per record. If mutation 2 of 10 conflicts, does the entire batch reject with `409 REVISION_CONFLICT` or can non-conflicting mutations commit?  
    *Recommendation:* True atomic execution: reject entire batch with `409 REVISION_CONFLICT` returning conflicting record data, allowing client to reconcile and re-issue batch.
 
-4. **`> TODO(question): PUT /api/v1/vault/crypto-metadata route naming & scoping`**  
+> Open question Q3: see Open Questions Register in `docs/product/acceptance.md`.
    *Context:* PRD §11 lists `PUT /api/v1/vault/crypto-metadata` (singular `vault`, no `:vaultId`).  
    *Recommendation:* Scope vault by the authenticated device token, matching `/api/v1/sync`.
 
-5. **`> TODO(question): Delivery of recovery_envelope during recovery flow`**  
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
    *Context:* Bootstrap explicitly omits `recovery_envelope` for standard security isolation, but an enrolled recovery device requires the recovery envelope to unwrap the DEK.  
    *Recommendation:* Return `recovery_envelope` directly in the `201 Created` payload of `POST /api/v1/recovery/enroll-device`.

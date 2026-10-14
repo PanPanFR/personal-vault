@@ -3,7 +3,7 @@
 > **Normative Source Notice**  
 > This document specifies the authoritative synchronization protocol, concurrency control, and conflict resolution mechanisms for Personal Vault.  
 > Derived directly from `personal-vault-prd-v3.md` v3.0 (2026-10-13): specifically §8 (FR-3 Local-first persistence, FR-4 Encrypted cloud synchronization, FR-5 Device authorization), §10 (Data model), §11 (API and synchronization protocol), Appendix A (Stable error codes), Appendix B (Application-level rate limits), and Appendix D (Crypto/format versions).  
-> **Precedence:** On any ambiguity or conflict between this document and the PRD, the **PRD WINS**. Any unresolved implementation ambiguity is recorded as an explicit `> TODO(question): ...` marker and never resolved by silent speculation.
+> **Precedence:** On any ambiguity or conflict between this document and the PRD, the **PRD WINS**. Any unresolved implementation ambiguity is tracked in the Open Questions Register (`docs/product/acceptance.md`).
 
 ---
 
@@ -101,7 +101,7 @@ Personal Vault uses a **local-first, zero-knowledge, encrypted cloud synchroniza
 - **Identical Retry:** Submitting an identical mutation with the same `mutation_id` and matching payload must return the original success response rather than generating a new revision or triggering a conflict.
 - **Replay Detection:** Submitting a reused `mutation_id` with a different payload constitutes an invalid replay and returns `409 Conflict` with code `REPLAY_DETECTED` (PRD Appendix A).
 
-> TODO(question): PRD §11 line 483 states: "Repeated mutation IDs return the original result where possible and must not create new revisions," and Appendix A specifies `REPLAY_DETECTED` for payload mismatches. However, PRD §10 lists five D1 tables without a `mutation_id` column or an `idempotency_keys` table. Determine whether `mutation_id` is tracked in `sync_changes`, stored in `vault_records`, or maintained in an auxiliary table in D1.
+> Open question Q5: see Open Questions Register in `docs/product/acceptance.md`.
 
 ---
 
@@ -291,9 +291,9 @@ The synchronization cycle is divided into a **Pull Phase** (downloading remote c
   - Download apply is idempotent via `(record_id, revision, change_seq)` upserts.
   - Upload mutations are idempotent via `mutation_id` deduplication.
 
-> TODO(question): In batch sync, if mutation 2 of 5 encounters a revision conflict, PRD §11 line 456 specifies "atomic DB writes", implying the transaction rolls back entirely and returns the 409 conflict payload for that record. The client must handle resolving the conflicting record and then resubmit remaining pending mutations. Confirm whether batch fails atomically on first conflict or processes partial non-conflicting mutations.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
-> TODO(question): PRD §11 step 10 states: "Client commits the new cursor after the returned page has been applied." In `POST /api/v1/sync/batch`, the server assigns `change_seq` to committed mutations and returns `new_cursor`. Confirm whether the pushing client should advance its local pull cursor directly to `new_cursor` from the batch response, or always advance pull cursors exclusively via `GET /api/v1/sync` to ensure concurrent edits from other devices are never skipped.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ---
 
@@ -532,6 +532,6 @@ Synchronization is event-driven and non-polling. The protocol is triggered under
 
 The following open questions were identified during specification derivation from `personal-vault-prd-v3.md`:
 
-1. `> TODO(question): In batch sync, if mutation 2 of 5 encounters a revision conflict, PRD §11 line 456 specifies "atomic DB writes", implying the transaction rolls back entirely and returns the 409 conflict payload for that record. The client must handle resolving the conflicting record and then resubmit remaining pending mutations. Confirm whether batch fails atomically on first conflict or processes partial non-conflicting mutations.` (PRD §11 lines 456, 473; Appendix A line 716).
-2. `> TODO(question): PRD §11 step 10 states: "Client commits the new cursor after the returned page has been applied." In POST /api/v1/sync/batch, the server assigns change_seq to committed mutations and returns new_cursor. Confirm whether the pushing client should advance its local pull cursor directly to new_cursor from the batch response, or always advance pull cursors exclusively via GET /api/v1/sync to ensure concurrent edits from other devices are never skipped.` (PRD §11 step 10; `docs/backend/api-spec.md` §6.4).
-3. `> TODO(question): PRD §11 line 483 states: "Repeated mutation IDs return the original result where possible and must not create new revisions," and Appendix A specifies REPLAY_DETECTED for payload mismatches. However, PRD §10 lists five D1 tables without a mutation_id column or an idempotency_keys table. Determine whether mutation_id is tracked in sync_changes, stored in vault_records, or maintained in an auxiliary table in D1.` (PRD §10 D1 tables; §11 line 483; Appendix A line 715).
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
+> Open question Q5: see Open Questions Register in `docs/product/acceptance.md`.

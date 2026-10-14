@@ -4,7 +4,7 @@
 > This specification defines the authoritative security model, threat boundaries, error taxonomy, rate-limiting policies, and security invariants for Personal Vault.  
 > Derived directly from `personal-vault-prd-v3.md` v3.0 (2026-10-13) §2 (Architecture decisions), §5 (Platform limitations), §8 (Functional requirements FR-1 through FR-9), §9 (Security model and threat boundaries), §10 (Data model), §11 (API and synchronization protocol), Appendix A (Stable error codes), Appendix B (Application-level rate limits), Appendix C (Recovery-kit file), and Appendix D (Crypto/format versions).  
 > **On any discrepancy or conflict between this document and the PRD, the PRD WINS.**  
-> Any unresolved ambiguity is marked with a normative `> TODO(question): ...` annotation.
+> Any unresolved ambiguity is marked as an open question and tracked in the Open Questions Register (`docs/product/acceptance.md`).
 
 ---
 
@@ -429,7 +429,7 @@ All API errors return a standardized JSON envelope:
 
 *Normative Rule: Every error code maps to exactly one UI category (PRD Appendix A).*
 
-> TODO(question): PRD Appendix A lists `QUOTA_EXHAUSTED` under both "network failure (`INTERNAL_ERROR` retryable, `QUOTA_EXHAUSTED`)" and "quota exhaustion (`QUOTA_EXHAUSTED`)" despite asserting "every code maps to exactly one category". In this specification and `docs/backend/api-spec.md`, `QUOTA_EXHAUSTED` is assigned exclusively to the dedicated "Quota exhaustion" category (503 status, UI displays "sync paused", local storage maintained), while `INTERNAL_ERROR` is assigned exclusively to "Network failure".
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ```
 +-------------------------------------------------------------------------------------------------------+

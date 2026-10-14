@@ -5,7 +5,7 @@
 >  
 > - **Normative Source:** Derived directly from `personal-vault-prd-v3.md` v3.0 (2026-10-13): specifically §2 (Firm product decisions), §3 (Goals and success measures), §5 (Target platforms and PWA limitations, G11), §8 (FR-3 Local-first persistence & SW update lifecycle, G12), §9 (Security model & threat boundaries), §12 (Non-functional requirements), §13 (Hosting and free-tier plan), §14 (MVP acceptance criteria), §15 (Milestones 5 & 6), and §17 (Definition of Done).  
 > - **Precedence Rule:** `personal-vault-prd-v3.md` v3.0 is the sole normative authority. On any discrepancy between this specification and the PRD, the **PRD WINS**.  
-> - **Derivation Rule:** Derive strictly from PRD requirements without introducing novel product features. Any unresolved ambiguity is explicitly marked with `> TODO(question): ...`.
+> - **Derivation Rule:** Derive strictly from PRD requirements without introducing novel product features. Any unresolved ambiguity is tracked in the Open Questions Register (`docs/product/acceptance.md`).
 
 ---
 
@@ -110,7 +110,7 @@ To protect users against unexpected WebKit storage purging, the application impl
    - Banner Copy: *"iOS Safari may delete local vault data if unopened for 7 days. Download an encrypted backup to prevent data loss."*
    - Banner Persistence: The banner remains prominently visible until the user completes at least one encrypted export (tracked locally via `last_export_at` timestamp).
 
-> TODO(question): PRD §5 (G11) specifies an "aggressive backup reminder on iOS (e.g. persistent Settings banner until an export exists)". Can the user temporarily dismiss this banner on the Dashboard for the current session, or must it remain permanently pinned to both Dashboard and Settings until `last_export_at` is populated?
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ### 2.4 Relaunch-After-Eviction Test & Clean-Start State Machine (PRD §5 G11, §14)
 
@@ -223,7 +223,7 @@ Acceptance testing requires deploying two consecutive production builds (Build 1
 3. Reload or navigate: verify that Build 2 either prompts the user or auto-reloads cleanly.
 4. Verify that Build 1 cache (`pv-shell-v1`) is completely purged and that no API request from Build 1 fails against Build 2 due to client cache staleness (PRD §FR-3 G12, §14).
 
-> TODO(question): PRD §FR-3 (G12) provides two paths for service worker update activation: (1) immediate `skipWaiting` + `clientsClaim` followed by a "reloaded to new version" notice, or (2) an explicit "Update available — reload" prompt. Sibling implementation plan `pwa-hardening-release.md` selected Option 1 (auto-activate + notice) as the engineering default. Does product accept auto-activate as the permanent default, or must an explicit user prompt be configurable?
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ### 3.4 Browser Storage Errors & Persistent Storage Requests (PRD §FR-3)
 
@@ -357,7 +357,7 @@ Continuous polling is strictly prohibited to preserve free-tier request and CPU 
 2. **Batch Packing:** The outbox packs up to **50 mutations or 1 MiB of ciphertext** into a single `POST /api/v1/sync/batch` request, minimizing HTTP overhead and D1 row transactions.
 3. **Foreground Inactivity Guard:** When the browser tab is hidden or backgrounded, periodic interval timers are suspended. Upon regaining foreground visibility, the app checks if the inactivity lock timeout has elapsed before performing any sync (PRD §FR-6, §13).
 
-> TODO(question): PRD §13 specifies sync executes on a "conservative foreground interval while unlocked" without freezing the exact interval duration. Implementation plans specify a 60-second default. Should the 60-second foreground timer be hard-coded or user-configurable in Settings (e.g., 30s, 60s, 300s, or manual-only)?
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ---
 
@@ -433,7 +433,7 @@ Continuous polling is strictly prohibited to preserve free-tier request and CPU 
    - Once quotas are available, open the vault and tap **"Retry Sync"** in Settings.
    - Confirm pending mutations drain from outbox and sync status transitions to **"Synced"**.
 
-> TODO(question): Cloudflare resets daily free quotas at UTC 00:00. When receiving `503 QUOTA_EXHAUSTED`, should the client schedule an automated sync retry at UTC midnight, or rely exclusively on user foreground interaction / manual retry?
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ---
 
@@ -526,10 +526,10 @@ A vault is certified for production personal use only when the user has verified
 
 The following questions represent ambiguities identified in `personal-vault-prd-v3.md` that must be finalized during engineering execution:
 
-> TODO(question): PRD §FR-3 (G12) provides two valid options for service worker update activation: (1) immediate `skipWaiting` + `clientsClaim` followed by a "reloaded to new version" notice, or (2) an explicit user prompt modal ("Update available — reload"). The plan default selects Option 1. Does product confirm Option 1 as the single permanent behavior?
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
-> TODO(question): PRD §13 mandates periodic sync on "a conservative foreground interval while unlocked" without specifying the exact duration. Plan specifies 60 seconds. Should this be fixed at 60s or configurable in Settings (e.g. 30s, 60s, 300s, manual)?
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
-> TODO(question): PRD §5 (G11) specifies an "aggressive backup reminder on iOS (e.g. persistent Settings banner until an export exists)". Can the user temporarily dismiss this banner on the Dashboard during an active session, or is it strictly non-dismissible until `last_export_at` is recorded?
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
-> TODO(question): Cloudflare Free tier resets daily limits at UTC 00:00. When receiving `503 QUOTA_EXHAUSTED`, should the client schedule an automated sync retry at UTC midnight, or rely exclusively on user foreground interaction / manual retry?
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.

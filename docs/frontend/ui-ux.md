@@ -5,7 +5,7 @@
 >  
 > **Normative Source:** `personal-vault-prd-v3.md` v3.0 (2026-10-13) in the repository root.  
 > **Citations:** Specifically derived from §5 (Target platforms & PWA limitations), §6 (Recommended technology stack), §7 (Information architecture and UX), §8 (FR-1 Item management, FR-2 Global and advanced search, FR-8 Credential and clipboard handling, FR-9 Settings and data portability), §9 (Security model & metadata disclosure), §10 (Data model), §11 (API and synchronization protocol), §12 (Non-functional requirements), §13 (Hosting and free-tier plan), Appendix A (Stable error codes), Appendix C (Recovery-kit file format), and frozen User Decisions (2026-10-13).  
-> **Precedence:** On any ambiguity or conflict between this document and the PRD, the **PRD WINS**. Genuine ambiguities are recorded as explicit `> TODO(question): ...` markers and are never resolved by silent speculation.
+> **Precedence:** On any ambiguity or conflict between this document and the PRD, the **PRD WINS**. Genuine ambiguities are tracked in the Open Questions Register (`docs/product/acceptance.md`).
 
 ---
 
@@ -255,7 +255,7 @@ Handling sensitive credentials requires defensive UI controls to prevent shoulde
 - **Clipboard Clearing Notice & Policy:** The application attempts best-effort clipboard clearance after a brief delay (e.g., 30–60 seconds). However, because browser PWAs cannot control system clipboard managers or external applications, the UI must explicitly display the following disclaimer in Settings and Credential views:
   > *"Security Notice: Operating systems, third-party apps, and clipboard history managers may retain copied passwords. Clear your clipboard history manually if operating on a shared computer."* (PRD §FR-8, line 346).
 
-> TODO(question): PRD §FR-8 line 346 permits best-effort clipboard clearing after a short interval without specifying exact seconds. Is the default interval 30 seconds or 60 seconds, and should it be user-configurable in Settings?
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ---
 
@@ -309,7 +309,7 @@ Personal Vault has no email or central account directory; authorization is devic
 - **Device Revocation Action:**
   - Clicking `[Revoke Device]` opens a confirmation modal: *"Revoking this device will block it from all future cloud synchronization immediately. Note: Revocation cannot remotely wipe data already downloaded to that device."* (PRD §FR-5, line 230; §9, line 376).
 
-> TODO(question): PRD §FR-5 line 229 allows device renaming, but PRD §11 does not specify an endpoint for updating device labels (e.g., PATCH /api/v1/devices/:deviceId). Does device rename persist locally in IndexedDB only, or should an API endpoint be added to the frozen Milestone 3 contract?
+> Open question Q6: see Open Questions Register in `docs/product/acceptance.md`.
 
 #### 2. Device Pairing Workflow (PRD §FR-5, lines 233–241)
 - Initiated from an authorized, unlocked device by clicking `[+ Pair New Device]`.
@@ -400,7 +400,7 @@ Triggered when the server returns `409 REVISION_CONFLICT` due to an `expected_re
   1. **Keep local as a new item:** Creates a brand-new record with a new random `record_id` and `revision = 0` containing the local edits, while adopting the remote version for the original record ID. Guarantees zero data loss.
   2. **Use remote version:** Overwrites local draft with the incoming remote ciphertext and advances local revision to match the server.
 
-> TODO(question): PRD §11 line 475 mandates 'Keep local as a new item' and 'Use remote version', stating to omit merge rather than guess if it risks data loss. Should visual diff/field-level merge be deferred strictly to post-MVP?
+> Open question Q8: see Open Questions Register in `docs/product/acceptance.md`.
 
 ### 7.2 Conflict Dialog 2: Delete-vs-Edit Conflict (PRD §11, line 482; User Decisions verbatim)
 
@@ -537,6 +537,6 @@ Per user decision (2026-10-13), Personal Vault provides complete bilingual suppo
 
 The following open questions were identified during specification derivation from `personal-vault-prd-v3.md` and user decisions:
 
-1. `> TODO(question): PRD §FR-5 line 229 allows device renaming, but PRD §11 does not specify an endpoint for updating device labels (e.g., PATCH /api/v1/devices/:deviceId). Does device rename persist locally in IndexedDB only, or should an API endpoint be added to the frozen Milestone 3 contract?`
-2. `> TODO(question): PRD §FR-8 line 346 permits best-effort clipboard clearing after a short interval without specifying exact seconds. Is the default interval 30 seconds or 60 seconds, and should it be user-configurable in Settings?`
-3. `> TODO(question): PRD §11 line 475 mandates 'Keep local as a new item' and 'Use remote version', stating to omit merge rather than guess if it risks data loss. Should field-level 3-way visual merge be deferred strictly to post-MVP?`
+> Open question Q6: see Open Questions Register in `docs/product/acceptance.md`.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
+> Open question Q8: see Open Questions Register in `docs/product/acceptance.md`.

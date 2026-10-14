@@ -5,7 +5,7 @@
 >  
 > - **Normative Source:** Derived directly from `personal-vault-prd-v3.md` v3.0 (2026-10-13) §2 (Firm product decisions), §8 (FR-1, FR-3, FR-4, FR-5, FR-6, FR-7), §9 (Security model & requirements), §10 (Data model), §11 (API & sync protocol), Appendix C (Recovery-kit file), and Appendix D (Crypto/format versions).  
 > - **Precedence Rule:** `personal-vault-prd-v3.md` v3.0 is the sole normative authority. On any discrepancy between this specification and the PRD, the **PRD WINS**.  
-> - **Derivation Rule:** Derive strictly from PRD requirements without introducing novel cryptographic semantics. Any unresolved ambiguity is explicitly marked with `> TODO(question): ...`.
+> - **Derivation Rule:** Derive strictly from PRD requirements without introducing novel cryptographic semantics. Any unresolved ambiguity is tracked in the Open Questions Register (`docs/product/acceptance.md`).
 
 ---
 
@@ -179,7 +179,7 @@ To enforce strict cryptographic domain separation, keys are never reused across 
 3. **No Cross-Purpose Reuse:** A key derived under `PV-V1/REC-ENC` must never be used for local credential encryption, and vice versa.
 4. **Adding New Purposes:** Adding any cryptographic purpose requires defining a new versioned context label (e.g. `PV-V2/...`), never reusing existing subkeys.
 
-> TODO(question): Confirm whether HKDF-SHA-256 extract step uses an empty/zero-length salt (`""` / `null`) per RFC 5869 Section 2.2 defaults, or binds the vault `salt_b64u` as the HKDF salt. For IKM with 256 bits of uniform cryptographic entropy (DEK and Recovery Secret), RFC 5869 allows salt to be omitted. Recommended convention: empty salt `null` (zero-length byte array).
+> Open question Q4: see Open Questions Register in `docs/product/acceptance.md`.
 
 ---
 
@@ -344,7 +344,7 @@ function constructRecordAAD(
 }
 ```
 
-> TODO(question): Verify whether the raw concatenation `${vaultId}${recordId}${schemaVersion}${keyVersion}record` is accepted by all test vectors or whether a delimiter (e.g. `:` or `|`) or length-prefixing is required to eliminate theoretical ambiguity if version strings vary in length. For MVP `schema_version=1` and `key_version=1`, string concatenation is unambiguous because `vault_id` (26 chars) and `record_id` (36 chars) have invariant fixed lengths.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ### 7.3 Fail-Closed Decryption Invariant
 If **any** component of the AAD differs during decryption (wrong `vault_id`, tampered `record_id`, mismatched `schema_version`, mismatched `key_version`, or incorrect purpose string), Poly1305 MAC verification fails. The client **must fail closed**:
@@ -535,8 +535,8 @@ Verifies that client rejects out-of-bounds parameters before invoking KDF:
 
 ## 11. Open Questions & Ambiguities
 
-> TODO(question): Confirm whether HKDF-SHA-256 extract step uses an empty/zero-length salt (`""` / `null`) per RFC 5869 Section 2.2 defaults, or binds the vault `salt_b64u` as the HKDF salt. For IKM with 256 bits of uniform cryptographic entropy (DEK and Recovery Secret), RFC 5869 allows salt to be omitted. Recommended convention: empty salt `null` (zero-length byte array).
+> Open question Q4: see Open Questions Register in `docs/product/acceptance.md`.
 
-> TODO(question): Verify whether the raw concatenation `${vaultId}${recordId}${schemaVersion}${keyVersion}record` is accepted by all test vectors or whether a delimiter (e.g. `:` or `|`) or length-prefixing is required to eliminate theoretical ambiguity if version strings vary in length. For MVP `schema_version=1` and `key_version=1`, string concatenation is unambiguous because `vault_id` (26 chars) and `record_id` (36 chars) have invariant fixed lengths.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
-> TODO(question): Confirm whether the Cloudflare D1 schema stores the master and recovery envelopes as individual unpacked columns (`master_wrapped_dek`, `salt`, `kdf_m_kib`, etc., as in `docs/backend/data-model.md`) or as two serialized JSON strings (`master_envelope` and `recovery_envelope`). Both representations are semantically equivalent; serializer must match the D1 migration scripts.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.

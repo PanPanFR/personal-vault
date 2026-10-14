@@ -446,7 +446,7 @@ Clean Browser / Device                     Cloudflare API / D1
    - Server checks rate limit: **5 requests per vault per hour**, with doubling backoff after 3 consecutive failures.
    - Server verifies $\text{SHA-256}(\text{T}_{\text{rec\_auth}}) == \text{vaults.recovery\_auth\_verifier}$.
    - Server registers the new device and returns `201 Created` with `device_token` and the `recovery_envelope`.
-   > TODO(question): PRD §FR-7 step 3 states "Client downloads encrypted envelopes and record ciphertext, then uses the recovery secret locally (PV-V1/RECOVERY-WRAP) to unwrap the DEK." PRD §11 lines 454 and 749 specify that standard bootstrap excludes the recovery envelope. To support recovery cleanly without stateful session tracking, `POST /api/v1/recovery/enroll-device` must return `recovery_envelope` directly in its 201 response payload. Builder to confirm backend response schema.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 3. **DEK Decryption:**
    - Client derives $\text{K}_{\text{rec\_wrap}} = \text{HKDF}(\text{recovery\_secret}, \text{"PV-V1/RECOVERY-WRAP"})$.
    - Client unwraps DEK using `crypto_aead_xchacha20poly1305_ietf_decrypt`.
@@ -605,14 +605,14 @@ Per User Decision (2026-10-13):
 
 ## 8. Ambiguities & Open Questions Registry
 
-> **TODO(question): Envelope Delivery in Recovery Enrollment (`POST /api/v1/recovery/enroll-device`)**  
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 > *Context:* PRD §FR-7 step 3 states "Client downloads encrypted envelopes and record ciphertext, then uses the recovery secret locally (PV-V1/RECOVERY-WRAP) to unwrap the DEK." However, standard `GET /api/v1/vaults/:vaultId/bootstrap` explicitly omits the recovery envelope to minimize leakage to regular devices. Does `POST /api/v1/recovery/enroll-device` return the `recovery_envelope` directly in its `201 Created` response body, or is there a specialized authenticated endpoint `GET /api/v1/vault/recovery`?  
 > *Adopted Specification:* `POST /api/v1/recovery/enroll-device` returns `{ vault_id, device_id, device_token, recovery_envelope, created_at }` directly in the response. This avoids an extra round-trip and eliminates stateful tracking of "recovering" devices on the server.
 
-> **TODO(question): Device Rename Endpoint Contract**  
+> Open question Q6: see Open Questions Register in `docs/product/acceptance.md`.
 > *Context:* PRD §FR-5 line 229 mandates: "Show authorized devices with a user-entered or minimal local label, creation time, last-seen time, and revoke action." User decisions established that default `Device-XXXX` labels can be renamed. However, PRD §11 does not list an endpoint for updating device labels (e.g., `PATCH /api/v1/devices/:deviceId`).  
 > *Adopted Specification:* In the MVP, device labels can be updated locally in Dexie store `device_credentials` for the local device, and synchronized to D1 via an optional `label` parameter during sync or a lightweight `PATCH /api/v1/devices/:deviceId` endpoint. Builder to confirm if remote rename endpoint is in scope for foundations contract or remains local-only.
 
-> **TODO(question): Pairing Ticket Supersession Atomic Guarantee**  
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 > *Context:* PRD §FR-5 lines 227 & 436 specify that at most one unconsumed pairing ticket may exist per vault, and creating a new ticket invalidates any previous unconsumed ticket. D1 partial unique index `idx_pairing_tickets_single_active` enforces uniqueness of active tickets. When Device A requests a new ticket, does the worker delete prior unconsumed tickets or update `consumed_at = now()`?  
 > *Adopted Specification:* The worker runs an atomic transaction that executes `UPDATE pairing_tickets SET consumed_at = datetime('now') WHERE vault_id = ? AND consumed_at IS NULL;` immediately prior to inserting the new ticket. This preserves an audit trail of expired/superseded tickets without violating the unique index.

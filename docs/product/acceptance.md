@@ -34,7 +34,7 @@ Every checkbox from PRD §14 is assigned to exactly one owning implementation pl
 *Owning plan: `plan/foundations-schemas-contract.md` (2 checkboxes)*
 
 - [ ] **API error contract enforcement:** API errors use only Appendix A codes with the specified HTTP mappings; no SQL details, stack traces, or secret-bearing values. `[§14.5, Appendix A, §11, §15 M1/M3, §20 G4]`
-  > TODO(question): Schema and contract mapping for all 18 codes and HTTP status codes are frozen in foundations (`src/lib/errors.ts`, `openapi.yaml`). Runtime suppression of SQL leaks and stack traces is implemented in Worker handlers under `sync`. Mapped to foundations as the authoritative contract owner.
+  > Note: Schema and contract mapping for all 18 codes and HTTP status codes are frozen in foundations (`src/lib/errors.ts`, `openapi.yaml`). Runtime suppression of SQL leaks and stack traces is implemented in Worker handlers under `sync`. Mapped to foundations as the authoritative contract owner.
 - [ ] **OpenAPI / API-spec contract freeze:** OpenAPI/API-spec contract frozen at Milestone 3 gate; CI fails on frontend/backend contract drift. `[§14.5, §15 M3, §20 G1, §20 G15]`
 
 ---
@@ -59,7 +59,7 @@ Every checkbox from PRD §14 is assigned to exactly one owning implementation pl
 *Owning plan: `plan/cloud-sync-pairing.md` (21 checkboxes)*
 
 - [ ] **Zero-plaintext server audit:** D1 inspection and Worker logs reveal no plaintext item fields, master passphrase, recovery secret, raw device token, decrypted signing key, or search query. `[§14.2, §9, §11, §15 M3]`
-  > TODO(question): Verified at Milestone 3 exit gate against Pages Functions and D1. Depends on client encryption from `crypto` to guarantee no unencrypted payloads are ever submitted.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 - [ ] **Four-step pairing sequence:** A second device completes the full §FR-5 four-step sequence with a one-time ticket that expires after five minutes and cannot be reused; creating a second ticket invalidates the first. `[§14.3, §FR-5, §15 M3, §20 G3]`
 - [ ] **Passphrase requirement on paired device:** A paired device requires the master passphrase to decrypt vault content (token alone decrypts nothing). `[§14.3, §FR-5, §15 M3]`
 - [ ] **Token theft mitigation:** A stolen device token alone cannot mutate/delete records, revoke other devices, change key envelopes, or pair a new device. `[§14.3, §FR-5, §9, §15 M3, §18(3)]`
@@ -87,7 +87,7 @@ Every checkbox from PRD §14 is assigned to exactly one owning implementation pl
 *Owning plan: `plan/pwa-hardening-release.md` (9 checkboxes)*
 
 - [ ] **MVP item CRUD operations:** A user can create, view, edit, duplicate, search, favorite, archive, restore from archive, and delete all four MVP item types. `[§14.1, §FR-1, §15 M1/M6]`
-  > TODO(question): PRD §15 Milestone 1 scheduled UI shell and item forms under M1, but foundations plan explicitly scoped out all UI. Checkbox 1 is mapped to PWA (which owns application shell integration, responsive styling, and final §14 acceptance sweep), with Crypto providing encrypted Dexie helpers and MiniSearch. Confirm whether item CRUD UI should be split or explicitly tracked under PWA.
+  > Note: PRD §15 Milestone 1 scheduled UI shell and item forms under M1, but foundations plan explicitly scoped out all UI. Checkbox 1 is mapped to PWA (which owns application shell integration, responsive styling, and final §14 acceptance sweep), with Crypto providing encrypted Dexie helpers and MiniSearch. Confirm whether item CRUD UI should be split or explicitly tracked under PWA.
 - [ ] **Dashboard and responsive UI features:** Dashboard, Quick Add, category filters, tags, favorites, advanced search, keyboard navigation, and light/dark theme work at desktop and mobile widths. `[§14.1, §7, §12, §15 M1/M5]`
 - [ ] **Target platform installation:** PWA installation and relaunch behavior are tested on Windows/desktop Chromium, Android, and real iOS/iPadOS Safari. `[§14.1, §5, §15 M5]`
 - [ ] **Browser fallback usability:** If install is unavailable, the app remains usable in the browser. `[§14.1, §5, §15 M5]`
@@ -147,3 +147,17 @@ Traceability matrix linking every PRD v2.0 → v3.0 gap fix to its normative req
 | **G13** | Device `last_seen` spoofing risk | §FR-5, §10, §14.3 | `sync` | `functions/api/v1/*` middleware sets `last_seen_at = CURRENT_TIMESTAMP` server-side; ignores any client-supplied timestamp; disclosed in Settings. |
 | **G14** | WASM crypto load failure handling | §2(11), §FR-6, §9(4), §14.1 | `crypto` / `pwa` | `tests/crypto/wasm-guard.test.ts`; blocked WASM script load triggers fatal error screen, disables all vault operations; CSP checks hash in prod build. |
 | **G15** | Milestone 1 schema-first ordering | §15 M1, §14.5 | `foundations` | Implementation sequence: `foundations-schemas-contract.md` merged before any UI or crypto implementation; CI enforces schemas as single source of truth. |
+
+
+## Open Questions Register
+
+Genuine PRD ambiguities tracked as a single collected list. Each remains unresolved and must not be guessed; implementation uses the placeholders or defaults noted in the relevant specification until a decision is recorded here.
+
+> TODO(question): Q1 — Initial device bearer-token issuance for POST /api/v1/vaults (device_token_hash vs server-side issuance).
+> TODO(question): Q2 — Exact header syntax and canonical request string for PV-Device mutation signatures.
+> TODO(question): Q3 — Route scope/name for PUT /api/v1/vault/crypto-metadata (singular vs `vaults/:vaultId`).
+> TODO(question): Q4 — HKDF-SHA-256 extract-step salt (empty/null vs binding salt_b64u).
+> TODO(question): Q5 — Storage location for sync mutation_id / idempotency keys in D1.
+> TODO(question): Q6 — Device rename persistence (IndexedDB-only vs API endpoint).
+> TODO(question): Q7 — Product UX details: service worker update activation mode, foreground sync interval and configurability, iOS backup reminder dismissibility, quota-exhaustion retry timing, clipboard clear interval.
+> TODO(question): Q8 — Whether field-level/three-way merge is deferred beyond PRD conflict choices.

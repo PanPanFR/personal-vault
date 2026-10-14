@@ -112,7 +112,7 @@ CREATE TABLE vaults (
 #### Indexes & Constraints
 - `PRIMARY KEY (vault_id)`
 
-> TODO(question): PRD §10 lists envelopes conceptually as "master-password key envelope (salt, KDF parameters, nonce, ciphertext)" and "recovery-wrapped DEK envelope (nonce, ciphertext, format/version)". Confirm whether implementation schema flattens envelope fields into explicit table columns (as structured above) or stores them as serialized JSON text columns (`master_envelope_json`, `recovery_envelope_json`).
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ---
 
@@ -237,7 +237,7 @@ WHERE consumed_at IS NULL;
 - `PRIMARY KEY (ticket_hash)`: Guarantees unique ticket hash lookup.
 - `idx_pairing_tickets_single_active`: Partial unique index on `(vault_id) WHERE consumed_at IS NULL`. Enforces at most one unconsumed ticket per vault.
 
-> TODO(question): SQLite / Cloudflare D1 partial unique indexes prohibit non-deterministic expressions like `expires_at > CURRENT_TIMESTAMP` in the `WHERE` clause. The schema therefore enforces `WHERE consumed_at IS NULL` at the index level. When a new ticket is generated, does the Worker explicitly mark any prior unconsumed tickets as consumed/invalidated, or prune expired tickets before inserting the new active ticket? (PRD §FR-5 specifies: "Creating a new ticket invalidates any previous unconsumed ticket for that vault.")
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ---
 
@@ -420,8 +420,8 @@ Decryption with any mismatched AAD field must fail closed (PRD §FR-6).
 
 ## 5. Open Questions & Ambiguities
 
-> TODO(question): PRD §10 lists envelopes in the `vaults` table conceptually as "master-password key envelope (salt, KDF parameters, nonce, ciphertext)" and "recovery-wrapped DEK envelope (nonce, ciphertext, format/version)". Confirm whether D1 implementation stores these as individual relational columns (e.g., `salt`, `kdf_m_kib`, `master_wrapped_dek`, `recovery_wrapped_dek`) or as two serialized JSON text columns (`master_envelope_json`, `recovery_envelope_json`).
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
-> TODO(question): SQLite / Cloudflare D1 partial unique indexes prohibit non-deterministic expressions like `expires_at > CURRENT_TIMESTAMP` in the `WHERE` clause. The schema therefore enforces `WHERE consumed_at IS NULL` at the index level. When a new ticket is generated, does the Worker explicitly mark any prior unconsumed tickets as consumed/invalidated, or prune expired tickets before inserting the new active ticket? (PRD §FR-5 specifies: "Creating a new ticket invalidates any previous unconsumed ticket for that vault.")
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
-> TODO(question): In `vault_records` and `sync_changes`, verify whether D1 SQLite schema represents timestamps as ISO-8601 text strings (`TEXT`) or Unix millisecond/second integers (`INTEGER`). PRD §10 notes "server update timestamp" and minimal timestamps without specifying physical SQLite storage type.
+> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
