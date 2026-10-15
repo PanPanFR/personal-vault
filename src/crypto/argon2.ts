@@ -126,8 +126,7 @@ export async function calibrateArgon2(
     benchmark ??
     (async () => {
       const sodium = await ensureSodium();
-      const dummySalt = new Uint8Array(SALT_BYTES);
-      sodium.randombytes_buf(dummySalt);
+      const dummySalt = sodium.randombytes_buf(SALT_BYTES);
       const pw = sodium.from_string("pv-calibration-dummy");
       const started = Date.now();
       try {

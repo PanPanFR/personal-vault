@@ -28,7 +28,8 @@ export function b64uDecodeSync(
 
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const sodium = await ensureSodium();
-  const digest = sodium.crypto_hash_sha256(bytes);
+  const normalized = bytes.constructor === Uint8Array ? bytes : new Uint8Array(bytes);
+  const digest = sodium.crypto_hash_sha256(normalized);
   return sodium.to_hex(digest).toLowerCase();
 }
 
