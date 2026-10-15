@@ -1,0 +1,62 @@
+name: CI
+
+# PRD §14.5 / M5: dependency audit, typecheck, unit tests, production build and
+# the PWA release gate all run before a deploy can be considered green.
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # build id embeds the git sha
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.23.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # The lockfile IS the pin: a drifted lock is a hard failure, never a silent update.
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Dependency audit
+        run: pnpm audit --audit-level=moderate
+
+      - name: Typecheck + lint
+        run: pnpm run typecheck
+
+      - name: Unit + integration tests
+        run: pnpm run test
+
+      - name: Production build (typecheck + vite + PWA artifacts)
+        run: pnpm run build
+
+      # Fails on: missing manifest/icons, bad SW precache list, weak or missing
+      # CSP, unpinned wasm, remote runtime dependency, plaintext API caching.
+      - name: Production build release gate
+        run: pnpm run verify:prod
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/
+          retention-days: 7

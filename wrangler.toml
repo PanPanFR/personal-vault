@@ -1,0 +1,34 @@
+# Personal Vault deployment configuration (Cloudflare Pages + D1).
+#
+# Two SEPARATE databases: dev must never touch production data. Destructive
+# release tests (pair/revoke/all-lost recovery) run against `personal-vault-dev`.
+#
+# Secrets never live here: device tokens are issued per device and stored
+# client-side encrypted. Only binding IDs and the Pages project name are config.
+#
+# Docs: docs/setup-recovery-appendix.md (§2 setup, §3 release gate, §2.1 migrations).
+
+name = "personal-vault"
+compatibility_date = "2025-02-01"
+pages_build_output_dir = "dist"
+
+# Environment binding used by functions/_shared/auth.ts (`env.DB`).
+# Set this to the DEV database for preview/dev builds and the PROD database for
+# the production branch — do not point a preview at prod.
+[[d1_databases]]
+binding = "DB"
+database_name = "personal-vault-dev"
+database_id = "REPLACE_WITH_DEV_DATABASE_ID"
+migrations_dir = "migrations"
+
+[[d1_databases]]
+binding = "DB_PROD"
+database_name = "personal-vault-prod"
+database_id = "REPLACE_WITH_PROD_DATABASE_ID"
+migrations_dir = "migrations"
+
+[vars]
+# Surfaced in the UI as an explicit limitation; never a secret.
+VAULT_ENVIRONMENT = "dev"
+
+# Deployment: pnpm release:check && wrangler pages deploy dist --project-name personal-vault

@@ -1,13 +1,52 @@
 <!doctype html>
-<html lang="en">
+<!--
+  Personal Vault app shell.
+
+  Header/meta reconciliation owner: plan/pwa-hardening-release.md.
+  Security headers (CSP, nosniff, referrer, frames) are served by
+  dist/_headers (Cloudflare Pages), NOT by a meta tag — a meta CSP cannot express
+  frame-ancestors and is trivially bypassed by a stray header.
+
+  Installability: web manifest + iOS touch icon + standalone display.
+  Browser fallback: the app renders and works in any tab, install is optional.
+-->
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#eff1f5" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Personal Vault</title>
+    <meta
+      name="description"
+      content="Local-first encrypted personal vault: links, notes, snippets and occasional credentials. Encrypted on your device, synced end-to-end encrypted, no third-party scripts."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c1b1a" media="(prefers-color-scheme: dark)" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!-- PWA install surface -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- iOS standalone mode: no browser chrome, opaque background. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Vault" />
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 32rem">
+        <h1>Personal Vault</h1>
+        <p>
+          This vault decrypts your data in your browser, so JavaScript is required. Enable it and
+          reload — your encrypted data stays on this device.
+        </p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
