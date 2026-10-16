@@ -1,11 +1,6 @@
 # Personal Vault — Cryptographic Specification (v1)
 
-> **Normative Status & Precedence**  
-> This document specifies the authoritative cryptographic architecture, key derivation hierarchy, envelope schemas, request signing contracts, and verification rules for Personal Vault.  
->  
-> - **Normative Source:** Derived directly from `personal-vault-prd-v3.md` v3.0 (2026-10-13) §2 (Firm product decisions), §8 (FR-1, FR-3, FR-4, FR-5, FR-6, FR-7), §9 (Security model & requirements), §10 (Data model), §11 (API & sync protocol), Appendix C (Recovery-kit file), and Appendix D (Crypto/format versions).  
-> - **Precedence Rule:** `personal-vault-prd-v3.md` v3.0 is the sole normative authority. On any discrepancy between this specification and the PRD, the **PRD WINS**.  
-> - **Derivation Rule:** Derive strictly from PRD requirements without introducing novel cryptographic semantics. Any unresolved ambiguity is tracked in the Open Questions Register (`docs/product/acceptance.md`).
+> Normative source: personal-vault-prd-v3.md (PRD wins on conflict).
 
 ---
 
@@ -173,13 +168,11 @@ To enforce strict cryptographic domain separation, keys are never reused across 
 | `PV-V1/RECOVERY-WRAP` | Recovery Secret (32 bytes) | Recovery key-encryption key used to wrap/unwrap DEK in the recovery envelope. | 32 bytes (256 bits) |
 | `PV-V1/RECOVERY-AUTH` | Recovery Secret (32 bytes) | High-entropy recovery authorization token. Server stores `SHA-256(token)`. | 32 bytes (256 bits) |
 
-### 5.2 HKDF Derivation Rules
+### 5.2 HKDF Derivation Invariants
 1. **IKM Source:** High-entropy 256-bit root keys only (DEK or Recovery Secret). Never use raw passwords directly as IKM.
 2. **Context String Binding:** The `info` parameter is passed as exact ASCII/UTF-8 bytes matching the table above.
 3. **No Cross-Purpose Reuse:** A key derived under `PV-V1/REC-ENC` must never be used for local credential encryption, and vice versa.
 4. **Adding New Purposes:** Adding any cryptographic purpose requires defining a new versioned context label (e.g. `PV-V2/...`), never reusing existing subkeys.
-
-> Open question Q4: see Open Questions Register in `docs/product/acceptance.md`.
 
 ---
 
@@ -246,7 +239,7 @@ interface RecoveryEnvelope {
 ---
 
 ### 6.3 Recovery-Kit File Specification (PRD §FR-7, Appendix C)
-The recovery-kit file is a downloadable UTF-8 JSON document named `personal-vault-recovery-kit.json` (MIME `application/json`, no BOM).
+The recovery-kit file is a downloadable UTF-8 JSON document named `personal-vault-recovery-kit.json` (MIME `application/json`, no BOM). The recovery-kit file is secret material — store it offline and never upload it.
 
 #### JSON Schema
 ```json
@@ -343,8 +336,6 @@ function constructRecordAAD(
   return new TextEncoder().encode(aadString);
 }
 ```
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ### 7.3 Fail-Closed Decryption Invariant
 If **any** component of the AAD differs during decryption (wrong `vault_id`, tampered `record_id`, mismatched `schema_version`, mismatched `key_version`, or incorrect purpose string), Poly1305 MAC verification fails. The client **must fail closed**:
@@ -530,13 +521,3 @@ Verifies that client rejects out-of-bounds parameters before invoking KDF:
 3. **Above Ceiling Memory:** `m = 1048576, t = 5, p = 4` → Throws `CRYPTO_VERSION_UNSUPPORTED` (no memory allocated).
 4. **Above Ceiling Iterations:** `m = 524288, t = 6, p = 4` → Throws `CRYPTO_VERSION_UNSUPPORTED`.
 5. **Above Ceiling Threads:** `m = 524288, t = 5, p = 5` → Throws `CRYPTO_VERSION_UNSUPPORTED`.
-
----
-
-## 11. Open Questions & Ambiguities
-
-> Open question Q4: see Open Questions Register in `docs/product/acceptance.md`.
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.

@@ -9,11 +9,11 @@ concurrency; lost devices are re-authorized from an offline recovery kit.
 ## Quick start
 
 ```bash
-npm install
-npm run dev        # Vite dev server
-npm test           # vitest (207 tests)
-npm run build      # tsc --noEmit + vite build
-npm run contract-drift   # asserts openapi.yaml matches docs/backend/api-spec.md
+pnpm install
+pnpm dev        # Vite dev server
+pnpm test       # vitest (291 tests)
+pnpm build      # tsc --noEmit + vite build
+pnpm contract-drift   # asserts openapi.yaml matches docs/api-spec.md
 ```
 
 ## Architecture
@@ -46,7 +46,7 @@ npm run contract-drift   # asserts openapi.yaml matches docs/backend/api-spec.md
 ## API
 
 Nine endpoints under `/api/v1`, frozen in `openapi.yaml` and specified
-normatively in `docs/backend/api-spec.md`:
+normatively in `docs/api-spec.md`:
 
 | Method | Path | Auth |
 |---|---|---|
@@ -80,12 +80,12 @@ Appendix B rate limits and §11 idempotency.
 | Area | Path |
 |---|---|
 | Product requirements | `personal-vault-prd-v3.md` |
-| Backend contracts | `docs/backend/` (api-spec, sync-protocol, data-model, crypto-spec, device-pairing-recovery, architecture) |
-| Security | `docs/security/security-threat-model.md` |
-| Frontend / UX | `docs/frontend/` |
-| Acceptance | `docs/product/acceptance.md` |
-| Architecture decisions | `docs/adr/` |
+| Backend contracts | `docs/api-spec.md`, `docs/sync-protocol.md`, `docs/data-model.md`, `docs/crypto-spec.md`, `docs/device-pairing-recovery.md` |
+| Architecture & runbook | `docs/architecture.md` |
+| Security | `docs/security-threat-model.md` |
+| Frontend / UX | `docs/ui-ux.md`, `docs/pwa-operational.md` |
+| Architecture decisions | `docs/decisions.md` |
 
 Precedence on any discrepancy: **PRD > api-spec.md > openapi.yaml > code**.
 Adding or renaming fields or error codes requires a formal contract revision,
-enforced by `npm run contract-drift`.
+enforced by `pnpm contract-drift`.

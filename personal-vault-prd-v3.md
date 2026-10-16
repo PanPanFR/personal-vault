@@ -444,7 +444,7 @@ Use composite indexes for vault-scoped sync and record lookup, and indexes that 
 
 ## 11. API and synchronization protocol
 
-The API is same-origin under `/api/v1/*`. The machine-readable contract (`openapi.yaml` or `docs/backend/api-spec.md`) is normative: it must be committed, reviewed, and frozen as the Milestone 3 exit gate before any Milestone 4 sync work starts, and frontend/backend must not diverge from it afterward (see Milestone 3). Field names, status codes, and error codes in this PRD's appendices are binding on that contract.
+The API is same-origin under `/api/v1/*`. The machine-readable contract (`openapi.yaml` or `docs/api-spec.md`) is normative: it must be committed, reviewed, and frozen as the Milestone 3 exit gate before any Milestone 4 sync work starts, and frontend/backend must not diverge from it afterward (see Milestone 3). Field names, status codes, and error codes in this PRD's appendices are binding on that contract.
 
 ### Required endpoint behaviors
 
@@ -598,7 +598,7 @@ Release is blocked unless the following are tested and passing:
 
 ### Milestone 3 — Cloud API, D1, and device authorization
 
-- **Exit gate: commit and freeze the machine-readable API contract** (`openapi.yaml` or `docs/backend/api-spec.md` covering every endpoint in §11, all Appendix A codes with HTTP mappings, and size limits). No Milestone 4 work starts until the contract is reviewed.
+- **Exit gate: commit and freeze the machine-readable API contract** (`openapi.yaml` or `docs/api-spec.md` covering every endpoint in §11, all Appendix A codes with HTTP mappings, and size limits). No Milestone 4 work starts until the contract is reviewed.
 - Create the Pages Functions API and D1 schema/migrations (§10, including single-active-ticket index).
 - Implement vault creation, token hashing, Ed25519 signature validation, device pairing (full §FR-5 sequence), one-time tickets, recovery enrollment (with Appendix B limits), and revocation.
 - Add bounded request handling, same-origin security headers, and stable API error contracts.
@@ -683,7 +683,7 @@ These references support the current platform constraints and security practices
 
 | ID | Gap in v2 | Fix in v3 |
 |---|---|---|
-| G1 | §11 said "exact response schemas should be committed" but defined none — frontend/backend drift risk. | §11 + Milestone 3: machine-readable contract (`openapi.yaml` / `docs/backend/api-spec.md`) is the normative Milestone 3 exit gate; §14 blocks release on contract-drift CI. |
+| G1 | §11 said "exact response schemas should be committed" but defined none — frontend/backend drift risk. | §11 + Milestone 3: machine-readable contract (`openapi.yaml` / `docs/api-spec.md`) is the normative Milestone 3 exit gate; §14 blocks release on contract-drift CI. |
 | G2 | Argon2id "calibrate" with no baseline — implementer could pick weak params. | §FR-6: normative Minimum/Recommended/Mobile-fallback/Maximum-cap table, calibration procedure, floor/ceiling rejection rules, `kdf_version = 1`. |
 | G3 | Pairing described only the authorized-device side; new-device bootstrap missing. | §FR-5: normative 4-step sequence (ticket creation → exchange → bootstrap+unlock → initial sync), single-active-ticket rule, raw-token-once handling. |
 | G4 | "Stable machine-readable codes" required but no code defined. | Appendix A: frozen error-code enum with HTTP mappings + UI category mapping. |

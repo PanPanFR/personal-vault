@@ -3,7 +3,7 @@ info:
   title: Personal Vault API
   version: "1.0.0"
   description: >
-    Machine-readable mirror of docs/backend/api-spec.md (normative human contract).
+    Machine-readable mirror of docs/api-spec.md (normative human contract).
     Frozen contract v1: schema_version=1, crypto_format_version=1, kdf_version=1,
     key_version=1. Ciphertext-only storage. Adding/renaming fields or error codes
     requires a formal contract revision. Precedence: PRD > api-spec.md > openapi.yaml > code.

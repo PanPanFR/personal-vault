@@ -1,5 +1,5 @@
 // Crypto error type — uses frozen Appendix A codes, never renames them.
-// Source: src/lib/errors.ts (frozen), docs/backend/crypto-spec.md §4.3/§7.3.
+// Source: src/lib/errors.ts (frozen), docs/crypto-spec.md §4.3/§7.3.
 import type { ErrorCode } from "../lib/errors";
 
 export class CryptoError extends Error {

@@ -6,7 +6,7 @@
 # Secrets never live here: device tokens are issued per device and stored
 # client-side encrypted. Only binding IDs and the Pages project name are config.
 #
-# Docs: docs/setup-recovery-appendix.md (§2 setup, §3 release gate, §2.1 migrations).
+# Docs: docs/architecture.md §9 Operations Runbook (setup, migrations, release gate).
 
 name = "personal-vault"
 compatibility_date = "2025-02-01"

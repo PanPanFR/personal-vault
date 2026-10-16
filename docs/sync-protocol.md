@@ -1,9 +1,6 @@
 # Personal Vault — Synchronization Protocol Specification
 
-> **Normative Source Notice**  
-> This document specifies the authoritative synchronization protocol, concurrency control, and conflict resolution mechanisms for Personal Vault.  
-> Derived directly from `personal-vault-prd-v3.md` v3.0 (2026-10-13): specifically §8 (FR-3 Local-first persistence, FR-4 Encrypted cloud synchronization, FR-5 Device authorization), §10 (Data model), §11 (API and synchronization protocol), Appendix A (Stable error codes), Appendix B (Application-level rate limits), and Appendix D (Crypto/format versions).  
-> **Precedence:** On any ambiguity or conflict between this document and the PRD, the **PRD WINS**. Any unresolved implementation ambiguity is tracked in the Open Questions Register (`docs/product/acceptance.md`).
+> Normative source: personal-vault-prd-v3.md (PRD wins on conflict).
 
 ---
 
@@ -100,8 +97,6 @@ Personal Vault uses a **local-first, zero-knowledge, encrypted cloud synchroniza
 - If a network partition or timeout occurs after the server commits a batch but before the client receives the `200 OK` response, the client retries the batch with the exact same `mutation_id`s.
 - **Identical Retry:** Submitting an identical mutation with the same `mutation_id` and matching payload must return the original success response rather than generating a new revision or triggering a conflict.
 - **Replay Detection:** Submitting a reused `mutation_id` with a different payload constitutes an invalid replay and returns `409 Conflict` with code `REPLAY_DETECTED` (PRD Appendix A).
-
-> Open question Q5: see Open Questions Register in `docs/product/acceptance.md`.
 
 ---
 
@@ -290,10 +285,6 @@ The synchronization cycle is divided into a **Pull Phase** (downloading remote c
 - Re-executing pull requests or re-submitting previously processed mutation batches is completely safe:
   - Download apply is idempotent via `(record_id, revision, change_seq)` upserts.
   - Upload mutations are idempotent via `mutation_id` deduplication.
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ---
 
@@ -524,14 +515,4 @@ Synchronization is event-driven and non-polling. The protocol is triggered under
    When the app transitions to the foreground, a check runs. Aggressive polling is strictly prohibited (PRD §13, Appendix B).
 
 > **Architectural Boundary Note:**  
-> Detailed PWA service-worker lifecycle events (`skipWaiting`, `clientsClaim`, Cache API isolation), background sync registrations, and UI state-machine transitions are documented in `docs/architecture/` and PWA documentation and are not duplicated here.
-
----
-
-## 10. Implementation Ambiguities & Open Questions
-
-The following open questions were identified during specification derivation from `personal-vault-prd-v3.md`:
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-> Open question Q5: see Open Questions Register in `docs/product/acceptance.md`.
+> Detailed PWA service-worker lifecycle events (`skipWaiting`, `clientsClaim`, Cache API isolation), background sync registrations, and UI state-machine transitions are documented in `docs/pwa-operational.md` and are not duplicated here.
