@@ -13,6 +13,7 @@ Use this index as the first lookup point before searching the whole repository. 
 | Token/component/UI styling decisions | `frontend/DESIGN.md` |
 | Screen flows, UI behavior, UX rules | `frontend/ui-ux.md` |
 | PWA, caching, installability, operational runbooks | `frontend/pwa-operational.md` |
+| Deployment, migrations, backup/recovery/incident runbook | `setup-recovery-appendix.md` |
 | Endpoint schemas, request/response, status codes, caps | `backend/api-spec.md` (normative human source) |
 | System stack, hosting, quotas, decisions | `backend/architecture.md` |
 | Dexie/D1 storage, tables, indexes, privacy rules | `backend/data-model.md` |
@@ -66,6 +67,12 @@ When documents disagree, resolve in this order:
 | Path | Role | Read when |
 |---|---|---|
 | `product/acceptance.md` | Acceptance checklist mapped to gates/owners | Release readiness, milestone gates, test planning |
+
+### Operations
+
+| Path | Role | Read when |
+|---|---|---|
+| `setup-recovery-appendix.md` | Deployment-specific runbook: local dev, Pages+D1 setup, versioned migrations, release gate, backup, recovery, incidents, device matrix | Deploying, migrating, backing up, recovering, or running a release |
 
 ### Decisions
 

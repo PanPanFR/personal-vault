@@ -13,6 +13,17 @@ export interface DeviceCredentials {
   privateKey: Uint8Array; // Ed25519 private key (64 bytes in libsodium)
 }
 
+/** Device row for the Settings device list (no secrets, no key material). */
+export interface DeviceSummary {
+  device_id: string;
+  label: string;
+  created_at: string;
+  /** Server-recorded only — clients cannot supply or spoof this value. */
+  last_seen_at: string;
+  last_ack_cursor?: number | null;
+  revoked_at?: string | null;
+}
+
 export class ApiError extends Error {
   code: ErrorCode | string;
   httpStatus: number;
@@ -233,6 +244,29 @@ export class SyncApiClient {
     return this.request(`/api/v1/devices/${targetDeviceId}/revoke`, {
       method: "POST",
       body: {},
+      credentials,
+      requireSignature: true,
+    });
+  }
+
+  /** Paired devices with SERVER-recorded last-seen (PRD FR-5 G13). */
+  public async listDevices(credentials: DeviceCredentials): Promise<DeviceSummary[]> {
+    const response = await this.request<{ devices: DeviceSummary[] }>("/api/v1/devices", {
+      method: "GET",
+      credentials,
+      requireSignature: false,
+    });
+    return Array.isArray(response?.devices) ? response.devices : [];
+  }
+
+  public async renameDevice(
+    targetDeviceId: string,
+    label: string,
+    credentials: DeviceCredentials,
+  ): Promise<{ device_id: string; label: string; status: string }> {
+    return this.request(`/api/v1/devices/${targetDeviceId}/label`, {
+      method: "POST",
+      body: { label },
       credentials,
       requireSignature: true,
     });

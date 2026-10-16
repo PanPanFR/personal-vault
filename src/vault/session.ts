@@ -101,3 +101,13 @@ export function checkResumeLock(now = Date.now()): boolean {
   touchActivity(now);
   return false;
 }
+
+/**
+ * Settings `lock_timeout` change (pwa plan). Applies to the live session when
+ * the vault is unlocked; a locked vault picks the new value up on next unlock.
+ */
+export function updateLockTimeout(minutes: LockTimeoutMinutes): boolean {
+  if (!isLockTimeout(minutes)) return false;
+  if (state) state.lockTimeoutMinutes = minutes;
+  return true;
+}

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Personal Vault">
+  <rect width="512" height="512" rx="112" fill="#282828"/>
+  <path d="M256 84 96 138v118c0 92 66 154 160 178 94-24 160-86 160-178V138L256 84Z" fill="#1c1b1a" stroke="#dcdcdc" stroke-width="14" stroke-linejoin="round"/>
+  <circle cx="256" cy="238" r="40" fill="none" stroke="#fabd2f" stroke-width="18"/>
+  <rect x="244" y="266" width="24" height="66" rx="12" fill="#fabd2f"/>
+  <rect x="216" y="330" width="80" height="20" rx="10" fill="#8ec07c"/>
+</svg>
