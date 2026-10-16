@@ -1,272 +1,76 @@
-import { errorResponse } from "./http";
-import { sha256Hex, verifyEd25519 } from "./crypto";
+// Single-password session gate.
+//
+// The whole model: PV_PASSWORD is a Worker secret; a correct password mints an
+// opaque random token stored in D1 (`sessions`) and handed back as an HttpOnly
+// cookie. Every data route checks the cookie against the table. That's it —
+// no hashing ceremony, no device keys, no signatures.
+import { parseCookies } from "./http";
 
-export interface PvDeviceHeader {
-  deviceId: string;
-  timestamp: string;
-  nonce: string;
-  signature: string;
+export interface Env {
+  DB: any; // D1 binding; typed loosely to stay independent of workers-types
+  PV_PASSWORD?: string;
 }
 
-export function parsePvDeviceHeader(header: string | null): PvDeviceHeader | null {
-  if (!header) return null;
-  const match = (field: string) => {
-    const r = new RegExp(`${field}="([^"]*)"`);
-    const m = header.match(r);
-    return m ? m[1] : null;
-  };
+export const SESSION_COOKIE = "pv_session";
+export const SESSION_DAYS = 90;
+const SESSION_TTL_MS = SESSION_DAYS * 24 * 60 * 60 * 1000;
 
-  const deviceId = match("device_id");
-  const timestamp = match("timestamp");
-  const nonce = match("nonce");
-  const signature = match("signature");
-
-  if (!deviceId || !timestamp || !nonce || !signature) {
-    return null;
-  }
-
-  return { deviceId, timestamp, nonce, signature };
+export function newToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export interface AuthenticatedDevice {
-  deviceId: string;
-  vaultId: string;
-  publicKey: string;
-  label: string;
+export async function getRequestSession(request: Request, env: Env): Promise<string | null> {
+  const token = parseCookies(request)[SESSION_COOKIE];
+  if (!token) return null;
+  const row = await env.DB.prepare(
+    "SELECT token FROM sessions WHERE token = ? AND expires_at > ?",
+  )
+    .bind(token, new Date().toISOString())
+    .first();
+  return row ? token : null;
 }
 
-export type AuthResult =
-  | { ok: true; device: AuthenticatedDevice }
-  | { ok: false; response: Response };
+/** Drop expired rows; keep the table from growing forever. */
+export async function purgeExpiredSessions(env: Env): Promise<void> {
+  await env.DB.prepare("DELETE FROM sessions WHERE expires_at <= ?")
+    .bind(new Date().toISOString())
+    .run();
+}
 
-export async function authenticate(
-  request: Request,
-  env: any,
-  options: {
-    requireSignature: boolean;
-    path: string;
-    method: string;
-    bodyText?: string;
-    expectedVaultId?: string;
-  },
-): Promise<AuthResult> {
-  const authHeader = request.headers.get("Authorization") || "";
-  const match = authHeader.match(/^Bearer\s+(.+)$/i);
-  if (!match) {
-    return {
-      ok: false,
-      response: errorResponse(
-        "DEVICE_UNAUTHORIZED",
-        "Missing or malformed device bearer token.",
-        401,
-        false,
-      ),
-    };
-  }
+export async function createSession(env: Env): Promise<string> {
+  const token = newToken();
+  const now = Date.now();
+  await purgeExpiredSessions(env);
+  await env.DB.prepare("INSERT INTO sessions (token, created_at, expires_at) VALUES (?, ?, ?)")
+    .bind(token, new Date(now).toISOString(), new Date(now + SESSION_TTL_MS).toISOString())
+    .run();
+  return token;
+}
 
-  const rawToken = match[1].trim();
-  const tokenHash = await sha256Hex(rawToken);
+export async function destroySession(env: Env, token: string): Promise<void> {
+  await env.DB.prepare("DELETE FROM sessions WHERE token = ?").bind(token).run();
+}
 
-  let row: any;
-  try {
-    row = await env.DB.prepare(
-      `SELECT vault_id, device_id, public_key, label, revoked_at
-       FROM authorized_devices
-       WHERE token_hash = ?`,
-    )
-      .bind(tokenHash)
-      .first();
-  } catch {
-    return {
-      ok: false,
-      response: errorResponse("INTERNAL_ERROR", "Database error.", 500, true),
-    };
-  }
+export function sessionCookie(token: string, secure: boolean): string {
+  const attrs = [
+    `${SESSION_COOKIE}=${token}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Max-Age=${SESSION_TTL_MS / 1000}`,
+  ];
+  if (secure) attrs.push("Secure");
+  return attrs.join("; ");
+}
 
-  if (!row) {
-    return {
-      ok: false,
-      response: errorResponse(
-        "DEVICE_UNAUTHORIZED",
-        "Unknown or invalid device bearer token.",
-        401,
-        false,
-      ),
-    };
-  }
+export function clearedCookie(secure: boolean): string {
+  const attrs = [`${SESSION_COOKIE}=`, "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=0"];
+  if (secure) attrs.push("Secure");
+  return attrs.join("; ");
+}
 
-  if (row.revoked_at !== null) {
-    return {
-      ok: false,
-      response: errorResponse(
-        "DEVICE_REVOKED",
-        "The authenticated device has been revoked.",
-        401,
-        false,
-      ),
-    };
-  }
-
-  const vaultId = row.vault_id as string;
-  const deviceId = row.device_id as string;
-
-  if (options.expectedVaultId && options.expectedVaultId !== vaultId) {
-    // Oracle defense: 404 on vault mismatch
-    return {
-      ok: false,
-      response: errorResponse(
-        "VAULT_NOT_FOUND",
-        "The specified vault does not exist.",
-        404,
-        false,
-      ),
-    };
-  }
-
-  const bodyText = options.bodyText ?? "";
-  const bodyDigest = await sha256Hex(bodyText);
-
-  if (options.requireSignature) {
-    const pv = parsePvDeviceHeader(request.headers.get("PV-Device"));
-    if (!pv) {
-      return {
-        ok: false,
-        response: errorResponse(
-          "INVALID_SIGNATURE",
-          "Missing or malformed PV-Device header.",
-          401,
-          false,
-        ),
-      };
-    }
-
-    if (pv.deviceId !== deviceId) {
-      return {
-        ok: false,
-        response: errorResponse(
-          "DEVICE_UNAUTHORIZED",
-          "Device identity mismatch between Bearer and PV-Device header.",
-          401,
-          false,
-        ),
-      };
-    }
-
-    const ts = new Date(pv.timestamp).getTime();
-    if (!Number.isFinite(ts)) {
-      return {
-        ok: false,
-        response: errorResponse(
-          "INVALID_SIGNATURE",
-          "Invalid timestamp in PV-Device header.",
-          401,
-          false,
-        ),
-      };
-    }
-
-    const skewMs = Math.abs(Date.now() - ts);
-    if (skewMs > 5 * 60 * 1000) {
-      return {
-        ok: false,
-        response: errorResponse(
-          "STALE_TIMESTAMP",
-          "Request timestamp differs from server clock by more than 5 minutes.",
-          401,
-          true,
-        ),
-      };
-    }
-
-    // Cryptographic verification FIRST. Recording the nonce before proving
-    // possession of the private key would let any caller with a bare token
-    // write rows into request_nonces (storage-exhaustion vector) and would
-    // leak a pre-signature replay oracle.
-    // Canonical string to sign:
-    // HTTP_METHOD\nHTTP_PATH\nTIMESTAMP\nNONCE\nBODY_SHA256_HEX
-    const canonical = `${options.method.toUpperCase()}\n${options.path}\n${pv.timestamp}\n${pv.nonce}\n${bodyDigest}`;
-    const valid = await verifyEd25519(
-      row.public_key,
-      new TextEncoder().encode(canonical),
-      pv.signature,
-    );
-
-    if (!valid) {
-      return {
-        ok: false,
-        response: errorResponse(
-          "INVALID_SIGNATURE",
-          "Ed25519 signature verification failed.",
-          401,
-          false,
-        ),
-      };
-    }
-
-    // Signature proven — now apply the replay policy (api-spec 2.3 step 5):
-    // same nonce + different body => REPLAY_DETECTED; same nonce + identical
-    // body is an idempotent replay of a request we already accepted, so it is
-    // rejected rather than re-executed (the cached-response contract is served
-    // per-endpoint by idempotency_keys for /sync/batch).
-    try {
-      const existing = await env.DB.prepare(
-        `SELECT body_digest FROM request_nonces WHERE device_id = ? AND nonce = ?`,
-      )
-        .bind(deviceId, pv.nonce)
-        .first();
-
-      if (existing) {
-        if (existing.body_digest !== bodyDigest) {
-          return {
-            ok: false,
-            response: errorResponse(
-              "REPLAY_DETECTED",
-              "A reused nonce was submitted with a differing request body.",
-              409,
-              false,
-            ),
-          };
-        }
-        return {
-          ok: false,
-          response: errorResponse(
-            "REPLAY_DETECTED",
-            "This request nonce was already used for an identical body.",
-            409,
-            false,
-          ),
-        };
-      }
-
-      await env.DB.prepare(
-        `INSERT INTO request_nonces (device_id, nonce, body_digest, created_at)
-         VALUES (?, ?, ?, ?)`,
-      )
-        .bind(deviceId, pv.nonce, bodyDigest, Date.now())
-        .run();
-    } catch {
-      // ignore insert conflict
-    }
-  }
-
-  // Update last_used_at (server-recorded provenance)
-  try {
-    await env.DB.prepare(
-      `UPDATE authorized_devices SET last_used_at = ? WHERE vault_id = ? AND device_id = ?`,
-    )
-      .bind(new Date().toISOString(), vaultId, deviceId)
-      .run();
-  } catch {
-    // best-effort provenance
-  }
-
-  return {
-    ok: true,
-    device: {
-      deviceId,
-      vaultId,
-      publicKey: row.public_key,
-      label: row.label,
-    },
-  };
+export function isSecureRequest(request: Request): boolean {
+  return new URL(request.url).protocol === "https:";
 }

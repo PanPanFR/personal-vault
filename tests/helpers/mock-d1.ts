@@ -19,22 +19,17 @@ export interface D1Database {
   close(): void;
 }
 
+/** In-memory D1 stand-in backed by node:sqlite; applies every migration. */
 export function createMockD1(): D1Database {
   const db = new DatabaseSync(":memory:");
 
-  // Execute migrations
-  const m1 = fs.readFileSync(
-    path.join(process.cwd(), "migrations", "0001_init.sql"),
-    "utf-8",
-  );
-  db.exec(m1);
-
-  if (fs.existsSync(path.join(process.cwd(), "migrations", "0002_rate_and_idempotency.sql"))) {
-    const m2 = fs.readFileSync(
-      path.join(process.cwd(), "migrations", "0002_rate_and_idempotency.sql"),
-      "utf-8",
-    );
-    db.exec(m2);
+  const dir = path.join(process.cwd(), "migrations");
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+  for (const file of files) {
+    db.exec(fs.readFileSync(path.join(dir, file), "utf-8"));
   }
 
   function createStatement(sql: string, boundArgs: any[] = []): D1PreparedStatement {
@@ -44,7 +39,6 @@ export function createMockD1(): D1Database {
       },
       async first<T = unknown>() {
         const stmt = db.prepare(sql);
-        // node:sqlite .get takes args directly
         const row = stmt.get(...boundArgs);
         return (row as T) ?? null;
       },
