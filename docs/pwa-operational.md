@@ -365,7 +365,7 @@ Continuous polling is strictly prohibited to preserve free-tier request and CPU 
 
 #### Execution Steps
 1. **Pre-Deployment Verification:**
-   - Execute production build: `npm run build`.
+   - Execute production build: `pnpm run build`.
    - Verify CSP headers: ensure `functions/_headers` contains the exact SHA-256 hash of the generated WASM binary and `'wasm-unsafe-eval'`.
    - Run API contract drift check against `docs/api-spec.md`.
 2. **Apply Database Migrations (if applicable):**
