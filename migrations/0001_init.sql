@@ -1,9 +1,9 @@
 -- Personal Vault D1 initial schema (foundations freeze, contract v1).
--- Normative source: docs/backend/data-model.md section 2.
+-- Normative source: docs/data-model.md section 2.
 -- No plaintext content indexes: opaque IDs, revisions, cursors, hashes, keys only.
 -- Ciphertext cap per record: 384 KiB (393216 bytes) base64url string, enforced
---   in Worker validation with 413 PAYLOAD_TOO_LARGE (see docs/d1-row-size-validation.md:
---   384 KiB fits a D1/SQLite TEXT row; gate verified, no cap change).
+--   in Worker validation with 413 PAYLOAD_TOO_LARGE (see docs/data-model.md,
+--   "384 KiB ciphertext row fit (verified)": fits, no cap change).
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE vaults (

@@ -1,9 +1,6 @@
 # Personal Vault — API Specification (v1)
 
-> **Normative Human Contract**  
-> This document is the authoritative, normative human-readable API contract for Personal Vault. The machine-readable `openapi.yaml` (maintained in the foundations plan) is a generated mirror kept strictly in sync with this specification by automated drift CI. **Never hand-edit both files independently; edits must originate in this document or be reconciled through an explicit contract revision.**  
->  
-> **Normative Source:** `personal-vault-prd-v3.md` v3.0 (2026-10-13) in the repository root. On any discrepancy or conflict between this document and the PRD, the **PRD WINS**. Genuine ambiguities are tracked in `docs/product/acceptance.md` (Open Questions Register).
+> Normative source: personal-vault-prd-v3.md (PRD wins on conflict).
 
 ---
 
@@ -88,7 +85,7 @@ Personal Vault implements a zero-trust, passwordless, device-centric authorizati
 
 ### 2.2 Device Bearer Token Handling
 - Each device possesses a cryptographically random 256-bit (32-byte) bearer token, base64url-encoded (43 chars, no padding).
-- The raw token is returned **once** to the client upon creation (`POST /api/v1/vaults`, `POST /api/v1/pairing/exchange`, or `POST /api/v1/recovery/enroll-device`).
+- The raw token is generated client-side upon initial vault creation (`POST /api/v1/vaults`, sending only its SHA-256 hash `device_token_hash`), or generated server-side and returned **once** to the client upon pairing exchange (`POST /api/v1/pairing/exchange`) or recovery enrollment (`POST /api/v1/recovery/enroll-device`).
 - The server stores **only** the SHA-256 hash of the device token: `device_token_hash = SHA-256(raw_token)` (hex-encoded, 64 chars). Raw tokens are never persisted or logged server-side.
 - The client stores the device token encrypted locally in IndexedDB under a local key derived from the vault DEK (`PV-V1/LOCAL-CRED`).
 - On authenticated requests, the token is supplied via the standard `Authorization` header:
@@ -104,8 +101,6 @@ Signed requests must include the custom `PV-Device` header:
 ```http
 PV-Device: device_id="<UUIDv4>", timestamp="<ISO-8601-UTC>", nonce="<UUIDv4>", signature="<base64url-ed25519-sig>"
 ```
-
-> Open question Q2: see Open Questions Register in `docs/product/acceptance.md`.
 
 #### Canonical Signing String Construction
 The Ed25519 signature is computed over the UTF-8 bytes of the following newline-delimited canonical string:
@@ -328,7 +323,7 @@ Summary of Endpoints:
 ### 6.1 `POST /api/v1/vaults` — Create Vault & Register First Device
 *PRD §11 (line 453), §FR-5, §FR-6, §FR-7, Appendix B.*
 
-Creates a new personal vault, stores its master and recovery key envelopes, and registers the creating device.
+Creates a new personal vault, stores its master and recovery key envelopes, and registers the creating device. The initial device token is generated client-side; the client transmits its SHA-256 hash (`device_token_hash`) in the request body.
 
 - **Authentication:** None.
 - **Rate Limit:** 3 requests per IP per hour.
@@ -368,8 +363,6 @@ Creates a new personal vault, stores its master and recovery key envelopes, and 
   }
 }
 ```
-
-> Open question Q1: see Open Questions Register in `docs/product/acceptance.md`.
 
 #### Response `201 Created`
 ```json
@@ -567,8 +560,6 @@ Submits a batch of client-side encrypted mutations (creates, updates, and delete
 #### Revision Conflict (`409 REVISION_CONFLICT`)
 If any mutation fails its CAS revision check (`expected_revision != current_revision`), the entire batch transaction is rolled back and returns `409 REVISION_CONFLICT` containing the latest server record state (see §3.3).
 
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
 #### Possible Error Responses
 - `400 VALIDATION_ERROR`: Body malformed, missing fields, or empty mutation list.
 - `401 DEVICE_UNAUTHORIZED` / `401 DEVICE_REVOKED`: Token invalid or revoked.
@@ -719,6 +710,7 @@ Updates the master-password key envelope (e.g. after a master passphrase change)
 > A passphrase change updates **only** the `master_envelope` (new salt, new Argon2id parameters, new nonce, re-wrapped DEK). The `recovery_envelope` is **not touched** because it wraps the same DEK under the independent recovery secret. The recovery envelope is updated only during explicit recovery-kit rotation.
 
 - **Authentication:** Valid device bearer token + valid `PV-Device` signature.
+- **Scope:** Scoped implicitly by the authenticated device bearer token (singular route `PUT /api/v1/vault/crypto-metadata`).
 - **Rate Limit:** 10 requests per vault per hour.
 - **Request Headers:**
   - `Content-Type: application/json`
@@ -745,8 +737,6 @@ Updates the master-password key envelope (e.g. after a master passphrase change)
   "recovery_auth_verifier": null
 }
 ```
-
-> Open question Q3: see Open Questions Register in `docs/product/acceptance.md`.
 
 #### Response `200 OK`
 ```json
@@ -822,36 +812,8 @@ Called when **all previously authorized devices are lost**. Authorizes a clean d
 4. User sets a new master passphrase. Device wraps the DEK with new KDF parameters and updates master envelope via `PUT /api/v1/vault/crypto-metadata`.
 5. Device downloads changes from `cursor = 0` via `GET /api/v1/sync`.
 
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
 #### Possible Error Responses
 - `400 VALIDATION_ERROR`: Missing fields or invalid UUID/ULID.
 - `401 DEVICE_UNAUTHORIZED`: Recovery authorization token invalid.
 - `404 VAULT_NOT_FOUND`: Specified vault not found.
 - `429 RATE_LIMITED`: Exceeded 5 requests per vault per hour.
-
----
-
-## 7. Ambiguities & Open Questions Registry
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
-> Open question Q1: see Open Questions Register in `docs/product/acceptance.md`.
-   *Context:* PRD §11 line 453 specifies "token hash only" for `POST /api/v1/vaults`, implying the client generates the initial device bearer token and sends `SHA-256(token)`. However, pairing exchange (§FR-5 line 238) and recovery enrollment generate tokens server-side and return the raw token once.  
-   *Recommendation:* Standardize on server-side generation across all endpoints or confirm client-generated token on initial creation.
-
-> Open question Q2: see Open Questions Register in `docs/product/acceptance.md`.
-   *Context:* PRD §FR-5 lines 224–226 requires both device token and Ed25519 signature. Plan `cloud-sync-pairing.md` proposed combining them into `Authorization: PV-Device <device_id>.<ts>.<nonce>.<sig_b64u>`, whereas `docs-split.md` specified `Authorization: Bearer <token>` paired with custom `PV-Device` header.  
-   *Recommendation:* Use `Authorization: Bearer <token>` + `PV-Device: device_id="...", timestamp="...", nonce="...", signature="..."` for clean separation of identity and cryptographic assertion.
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-   *Context:* PRD §11 line 456 specifies "atomic DB writes", while conflict resolution (§FR-4) discusses handling revision conflicts per record. If mutation 2 of 10 conflicts, does the entire batch reject with `409 REVISION_CONFLICT` or can non-conflicting mutations commit?  
-   *Recommendation:* True atomic execution: reject entire batch with `409 REVISION_CONFLICT` returning conflicting record data, allowing client to reconcile and re-issue batch.
-
-> Open question Q3: see Open Questions Register in `docs/product/acceptance.md`.
-   *Context:* PRD §11 lists `PUT /api/v1/vault/crypto-metadata` (singular `vault`, no `:vaultId`).  
-   *Recommendation:* Scope vault by the authenticated device token, matching `/api/v1/sync`.
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-   *Context:* Bootstrap explicitly omits `recovery_envelope` for standard security isolation, but an enrolled recovery device requires the recovery envelope to unwrap the DEK.  
-   *Recommendation:* Return `recovery_envelope` directly in the `201 Created` payload of `POST /api/v1/recovery/enroll-device`.

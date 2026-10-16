@@ -1,10 +1,6 @@
 # Personal Vault — Security Model and Threat Analysis Specification
 
-> **Normative Source & Precedence**  
-> This specification defines the authoritative security model, threat boundaries, error taxonomy, rate-limiting policies, and security invariants for Personal Vault.  
-> Derived directly from `personal-vault-prd-v3.md` v3.0 (2026-10-13) §2 (Architecture decisions), §5 (Platform limitations), §8 (Functional requirements FR-1 through FR-9), §9 (Security model and threat boundaries), §10 (Data model), §11 (API and synchronization protocol), Appendix A (Stable error codes), Appendix B (Application-level rate limits), Appendix C (Recovery-kit file), and Appendix D (Crypto/format versions).  
-> **On any discrepancy or conflict between this document and the PRD, the PRD WINS.**  
-> Any unresolved ambiguity is marked as an open question and tracked in the Open Questions Register (`docs/product/acceptance.md`).
+> Normative source: personal-vault-prd-v3.md (PRD wins on conflict).
 
 ---
 
@@ -205,9 +201,11 @@ The following ten requirements are normative and binding across client and serve
 - **Transport Security Headers:** Mandated on all responses (see Section 6).
 
 ### 4.4 Requirement 4 — Pinned WASM Crypto Build & Scoped CSP Permissions
-- **WASM Policy:** The Content Security Policy must restrict script execution to `'self'`, permitting only the specific WASM execution capability required by the crypto engine (`script-src 'self' 'wasm-unsafe-eval'`) (PRD §9.4).
-- **No Global Weakening:** CSP must not be weakened globally with `'unsafe-eval'`, `'unsafe-inline'` scripts, or wildcards to satisfy convenience libraries (PRD §9.4).
-- **Hash Pinning in CI:** The SHA-256 hash of the compiled `libsodium` WASM binary must be pinned in configuration and verified against the build output during production CI checks (PRD §9.4, §14).
+- **Exact Dependency Pin & Lockfile Integrity:** `libsodium-wrappers-sumo` is pinned to exact version `0.7.15` in `package.json` (no caret `^`), with transitive `libsodium-sumo 0.7.16`. Lockfile integrity (`pnpm-lock.yaml`):
+  `libsodium-wrappers-sumo@0.7.15: sha512-aSWY8wKDZh5TC7rMvEdTHoyppVq/1dTSAeAR7H6pzd6QRT3vQWcT5pGwCotLcpPEOLXX6VvqihSPkpEhYAjANA==`
+- **Sumo Build & CSP Configuration:** The sumo build ships the crypto core embedded in `dist/modules-sumo/libsodium-wrappers.js` (via `libsodium-sumo`), so there is no separate `.wasm` file to hash; Vite bundles it into the app chunk. Production CSP must therefore include `'wasm-unsafe-eval'` in `script-src` (required for WASM compilation/instantiation) and pin the sha256 hash of the built JS chunk at deploy time.
+- **WASM Policy & No Global Weakening:** The Content Security Policy restricts script execution to `'self'`, permitting only `'wasm-unsafe-eval'` for the crypto engine (`script-src 'self' 'wasm-unsafe-eval'`). CSP must never be weakened with `'unsafe-eval'`, `'unsafe-inline'` scripts, or wildcards (PRD §9.4).
+- **Runtime Gate:** Runtime gate `src/crypto/wasm-guard.ts` intercepts any initialization or load failure, renders `src/components/WasmBlock.tsx` full-screen, and blocks all vault operations, never falling back to pure JavaScript or unencrypted crypto.
 
 ### 4.5 Requirement 5 — No Server-Side URL Fetching & Mandatory HTML Escaping
 - **Zero Server Fetching:** The server must never fetch user-supplied URLs (e.g. for metadata preview, favicon extraction, or URL validation). URL formatting is validated purely via client-side regex/parser (PRD §8 FR-1, §9.5).
@@ -304,7 +302,7 @@ X-Server-Time: 2026-10-13T12:00:00.000Z
 
 | Header | Production Directive / Value | Threat Mitigated & Rationale | PRD Citation |
 |---|---|---|---|
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'` | Prevents XSS, data exfiltration, unauthorized iframe embedding, and plugin execution. Limits script execution to local origin and permits WASM via `'wasm-unsafe-eval'` (or pinned binary hash). Disallows third-party network connections. | PRD §9 (Req 3, 4) |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'` | Prevents XSS, data exfiltration, unauthorized iframe embedding, and plugin execution. Limits script execution to local origin and permits WASM via `'wasm-unsafe-eval'` with a sha256 pin of the built JS chunk at deploy time (as the sumo build embeds the crypto core into the app chunk without a standalone `.wasm` file). Disallows third-party network connections. | PRD §9 (Req 3, 4) |
 | `X-Content-Type-Options` | `nosniff` | Prevents MIME-type confusion attacks where user-supplied content is executed as JavaScript or CSS. | PRD §9 (Req 3) |
 | `Referrer-Policy` | `no-referrer` | Ensures no URL paths or query parameters are leaked to external origins during navigation. | PRD §9 (Req 3) |
 | `X-Frame-Options` | `DENY` | Clickjacking prevention. Blocks rendering inside `<iframe>`, `<frame>`, `<embed>`, or `<object>` elements across all origins. | PRD §9 (Req 3) |
@@ -354,7 +352,7 @@ To prevent denial-of-service (DoS), memory exhaustion on constrained mobile brow
 ## 8. Cryptographic Primitives, HKDF Context Labels & AAD Reference
 
 *Citations: PRD §8 (FR-6), §10 (Data model), Appendix D (Crypto/format versions).*  
-*Note: Detailed mathematical algorithms, derivation routines, and test vectors are normative in `docs/backend/crypto-spec.md`.*
+*Note: Detailed mathematical algorithms, derivation routines, and test vectors are normative in `docs/crypto-spec.md`.*
 
 ### 8.1 Primary Cryptographic Algorithms
 
@@ -428,8 +426,6 @@ All API errors return a standardized JSON envelope:
 ### 9.2 Seven UI Categories Partitioning & Handling
 
 *Normative Rule: Every error code maps to exactly one UI category (PRD Appendix A).*
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ```
 +-------------------------------------------------------------------------------------------------------+

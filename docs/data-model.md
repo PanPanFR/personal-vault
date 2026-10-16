@@ -112,8 +112,6 @@ CREATE TABLE vaults (
 #### Indexes & Constraints
 - `PRIMARY KEY (vault_id)`
 
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
 ---
 
 ### 2.3 Table 2: `vault_records` (PRD §10: D1 tables - `vault_records`, §FR-1, §FR-4)
@@ -157,6 +155,9 @@ CREATE INDEX idx_vault_records_seq ON vault_records (vault_id, change_seq);
 #### Indexes & Constraints
 - `PRIMARY KEY (vault_id, record_id)`: Guarantees unique records per vault.
 - `idx_vault_records_seq (vault_id, change_seq)`: Accelerates vault-scoped change sequence lookups and triage.
+
+#### 384 KiB ciphertext row fit (verified)
+Verdict fits — D1 is SQLite-backed, `TEXT` holds ~1e9 bytes, and the practical ceiling is the request/batch payload; ~400 KiB/row stays well under SQLite limits and the 1 MiB sync-batch body cap. Worker validation still strictly enforces per-record `length(ciphertext) <= 393216` and per-batch `mutations <= 50 AND body <= 1048576` before touching D1 → `413 PAYLOAD_TOO_LARGE`. If Cloudflare ever lowers the D1 `TEXT` ceiling, change together: `PLAINTEXT_ITEM_CAP_BYTES` (`src/lib/limits.ts`) + `CIPHERTEXT_RECORD_CAP_BYTES` + `openapi.yaml` `maxLength: 393216` + UI copy. Automated tests assert this in `tests/foundations.test.ts` and `migrations/0001_init.sql` records the gate outcome.
 
 ---
 
@@ -236,8 +237,6 @@ WHERE consumed_at IS NULL;
 #### Indexes & Constraints
 - `PRIMARY KEY (ticket_hash)`: Guarantees unique ticket hash lookup.
 - `idx_pairing_tickets_single_active`: Partial unique index on `(vault_id) WHERE consumed_at IS NULL`. Enforces at most one unconsumed ticket per vault.
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ---
 
@@ -415,13 +414,3 @@ vault_id || record_id || schema_version || key_version || "record"
 ```
 
 Decryption with any mismatched AAD field must fail closed (PRD §FR-6).
-
----
-
-## 5. Open Questions & Ambiguities
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.

@@ -15,6 +15,7 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "contract-drift": "node scripts/check-contract-drift.mjs",
     "icons": "node scripts/gen-icons.mjs",
     "pwa:build": "node scripts/build-pwa.mjs",
     "verify:prod": "node scripts/verify-prod-build.mjs",

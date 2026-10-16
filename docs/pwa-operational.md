@@ -1,11 +1,6 @@
 # Personal Vault — PWA Operational & Hardening Specification
 
-> **Normative Status & Precedence**  
-> This document specifies the operational lifecycle, target platform constraints, Service Worker caching policies, storage durability guarantees, Cloudflare free-tier quota limits, operational runbooks, and release soak protocols for Personal Vault.  
->  
-> - **Normative Source:** Derived directly from `personal-vault-prd-v3.md` v3.0 (2026-10-13): specifically §2 (Firm product decisions), §3 (Goals and success measures), §5 (Target platforms and PWA limitations, G11), §8 (FR-3 Local-first persistence & SW update lifecycle, G12), §9 (Security model & threat boundaries), §12 (Non-functional requirements), §13 (Hosting and free-tier plan), §14 (MVP acceptance criteria), §15 (Milestones 5 & 6), and §17 (Definition of Done).  
-> - **Precedence Rule:** `personal-vault-prd-v3.md` v3.0 is the sole normative authority. On any discrepancy between this specification and the PRD, the **PRD WINS**.  
-> - **Derivation Rule:** Derive strictly from PRD requirements without introducing novel product features. Any unresolved ambiguity is tracked in the Open Questions Register (`docs/product/acceptance.md`).
+> Normative source: personal-vault-prd-v3.md (PRD wins on conflict).
 
 ---
 
@@ -109,8 +104,6 @@ To protect users against unexpected WebKit storage purging, the application impl
    - On iOS/iPadOS devices, the app displays a prominent, persistent warning banner across the Dashboard and Settings views (PRD §5 G11).
    - Banner Copy: *"iOS Safari may delete local vault data if unopened for 7 days. Download an encrypted backup to prevent data loss."*
    - Banner Persistence: The banner remains prominently visible until the user completes at least one encrypted export (tracked locally via `last_export_at` timestamp).
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ### 2.4 Relaunch-After-Eviction Test & Clean-Start State Machine (PRD §5 G11, §14)
 
@@ -222,8 +215,6 @@ Acceptance testing requires deploying two consecutive production builds (Build 1
 2. Deploy Build 2 with updated frontend assets and an updated API route contract.
 3. Reload or navigate: verify that Build 2 either prompts the user or auto-reloads cleanly.
 4. Verify that Build 1 cache (`pv-shell-v1`) is completely purged and that no API request from Build 1 fails against Build 2 due to client cache staleness (PRD §FR-3 G12, §14).
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
 
 ### 3.4 Browser Storage Errors & Persistent Storage Requests (PRD §FR-3)
 
@@ -357,8 +348,6 @@ Continuous polling is strictly prohibited to preserve free-tier request and CPU 
 2. **Batch Packing:** The outbox packs up to **50 mutations or 1 MiB of ciphertext** into a single `POST /api/v1/sync/batch` request, minimizing HTTP overhead and D1 row transactions.
 3. **Foreground Inactivity Guard:** When the browser tab is hidden or backgrounded, periodic interval timers are suspended. Upon regaining foreground visibility, the app checks if the inactivity lock timeout has elapsed before performing any sync (PRD §FR-6, §13).
 
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
 ---
 
 ## 6. Operational Runbooks
@@ -378,7 +367,7 @@ Continuous polling is strictly prohibited to preserve free-tier request and CPU 
 1. **Pre-Deployment Verification:**
    - Execute production build: `npm run build`.
    - Verify CSP headers: ensure `functions/_headers` contains the exact SHA-256 hash of the generated WASM binary and `'wasm-unsafe-eval'`.
-   - Run API contract drift check against `docs/backend/api-spec.md`.
+   - Run API contract drift check against `docs/api-spec.md`.
 2. **Apply Database Migrations (if applicable):**
    - Review versioned SQL migration under `migrations/`.
    - Apply to staging/dev database first: `npx wrangler d1 migrations apply personal-vault-dev-db --local=false`.
@@ -433,8 +422,6 @@ Continuous polling is strictly prohibited to preserve free-tier request and CPU 
    - Once quotas are available, open the vault and tap **"Retry Sync"** in Settings.
    - Confirm pending mutations drain from outbox and sync status transitions to **"Synced"**.
 
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
 ---
 
 ### 6.4 Runbook 4: iOS Storage Eviction Recovery
@@ -471,7 +458,7 @@ Continuous polling is strictly prohibited to preserve free-tier request and CPU 
 
 Prior to entering personal release soak, all Milestone 1 through 5 gates must be certified passing:
 
-- [ ] **Contract Drift Gate (M3):** CI verifies frontend/backend parity against `docs/backend/api-spec.md`.
+- [ ] **Contract Drift Gate (M3):** CI verifies frontend/backend parity against `docs/api-spec.md`.
 - [ ] **WASM Integrity Gate (M2, M5):** Pinned binary hash verified in CSP; blocked-WASM failure halts safely.
 - [ ] **Two-Build SW Update Gate (M5):** Production consecutive builds update without stale-shell hazards.
 - [ ] **iOS Eviction Gate (M5):** Clean start after simulated eviction verified on real iOS Safari device.
@@ -517,19 +504,3 @@ A vault is certified for production personal use only when the user has verified
 1. At least one successful round-trip restore from `personal-vault-export-YYYYMMDD.json`.
 2. A verified offline physical or digital copy of `personal-vault-recovery-kit.json` stored safely.
 3. No occurrences of silent change discards or outbox corruption across all test sessions.
-
----
-
-## 8. Open Questions & Ambiguity Register
-
-*Citations: Derived per derivation rule; genuine PRD ambiguities tracked below.*
-
-The following questions represent ambiguities identified in `personal-vault-prd-v3.md` that must be finalized during engineering execution:
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
-
-> Open question Q7: see Open Questions Register in `docs/product/acceptance.md`.
