@@ -4,3 +4,4 @@ coverage/
 *.local
 .dev.vars
 graphify-out/
+.wrangler/
