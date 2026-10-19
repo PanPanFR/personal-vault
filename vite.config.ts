@@ -37,10 +37,11 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(`${pkg.version}+${gitSha()}`),
   },
   server: {
-    // Local dev loop: `pnpm dev` (UI) + `pnpm dev:api` (wrangler pages dev on
-    // :8788 serving pages Functions). UI requests to /api hit the Functions.
+    // Local dev loop: `pnpm dev` (UI) + `pnpm dev:api` (wrangler dev on :8787
+    // serving static assets from dist/ plus functions/). UI requests to /api
+    // hit the Worker.
     proxy: {
-      "/api": "http://localhost:8788",
+      "/api": "http://localhost:8787",
     },
   },
   build: {

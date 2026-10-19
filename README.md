@@ -31,12 +31,12 @@ bug. Do not put things in here you cannot afford to lose.
 
 ```bash
 pnpm install
-pnpm build                 # needed once: wrangler serves dist/
+pnpm build                 # UI build + compiles functions/ into a Worker script
 npx wrangler d1 migrations apply personal-vault --local
 echo "PV_PASSWORD=dev-password" > .dev.vars
 
-pnpm dev:api               # Pages Functions on :8788
-pnpm dev                   # UI on :5173, /api proxied to :8788
+pnpm dev:api               # Worker + static assets on :8787
+pnpm dev                   # UI on :5173, /api proxied to :8787
 ```
 
 ```bash
@@ -47,30 +47,37 @@ pnpm build                 # tsc + vite + PWA stamping (dist/sw.js, dist/_header
 
 ## Deploy
 
-Two supported paths:
+Deploys as a **Cloudflare Worker with static assets** (Workers is the successor
+to Cloudflare Pages for new projects; the `functions/` handlers are compiled to
+a single Worker script by `wrangler pages functions build`, which is part of
+`pnpm build`).
 
-**A. Git-connected (push to deploy).** Connect the GitHub repo once in the
-Cloudflare dashboard (Workers & Pages → Create → Pages → Connect to Git), then
-every push to `main` builds and deploys.
+**A. Git-connected (push to deploy) via Workers Builds.**
 
-- Production branch: `main`
+- Connect the GitHub repo once: Workers & Pages → the `personal-vault` Worker →
+  Settings → Builds → connect `PanPanFR/personal-vault`.
 - Build command: `pnpm build`
-- Build output directory: `dist`
-- Node version: set env var `NODE_VERSION` = `22` (optional but deterministic)
-- D1 binding `DB` comes from `wrangler.toml` (verify it under
-  Settings → Functions → D1 database bindings)
-- Secret: Settings → Environment variables → add `PV_PASSWORD` (Secret), production
+- Deploy command: `npx wrangler deploy`
+- Production branch: `main`
+- Secret `PV_PASSWORD` is set once per Worker (see CLI command below, or
+  dashboard → Settings → Variables & Secrets).
 
-**B. Direct upload (CLI).**
+Every push to `main` then builds and deploys automatically.
+
+**B. Direct deploy (CLI).**
 
 ```bash
-npx wrangler d1 create personal-vault      # paste database_id into wrangler.toml
+npx wrangler d1 create personal-vault      # done; database_id lives in wrangler.toml
 npx wrangler d1 migrations apply personal-vault --remote
-npx wrangler pages secret put PV_PASSWORD --project-name personal-vault
-pnpm deploy                                # build + wrangler pages deploy dist
+echo "<password>" | npx wrangler secret put PV_PASSWORD
+pnpm deploy                                # build + wrangler deploy
 ```
 
-To change the password later: re-run the `pages secret put` command (or edit the
+`wrangler.toml` wires everything: `main` (compiled functions Worker),
+`[assets]` (the `dist/` UI, SPA fallback, `/api/*` runs Worker-first), and the
+D1 binding `DB`.
+
+To change the password later: re-run the `secret put` command (or edit the
 dashboard env var). Existing
 sessions keep working; delete rows from `sessions` (or just log out per device)
 if you want to force re-login.

@@ -1,13 +1,14 @@
-# Personal Vault deployment configuration (Cloudflare Pages + D1).
+# Personal Vault deployment configuration (Cloudflare Workers + D1).
 #
-# The whole setup: one Pages project, one D1 database, one secret.
+# The whole setup: one Worker, one D1 database, one secret.
 #
-#   1. npx wrangler d1 create personal-vault
-#      → paste the returned database_id below
+#   1. npx wrangler d1 create personal-vault        (done; id below)
 #   2. npx wrangler d1 migrations apply personal-vault --remote   (first deploy)
 #      npx wrangler d1 migrations apply personal-vault --local    (dev)
-#   3. npx wrangler pages secret put PV_PASSWORD --project-name personal-vault
-#   4. pnpm deploy
+#   3. echo "<password>" | npx wrangler secret put PV_PASSWORD
+#   4. pnpm deploy       (build + wrangler deploy)
+#      — or just push to main; Workers Builds runs `pnpm build` then
+#        `npx wrangler deploy` for you.
 #
 # There is exactly one secret: PV_PASSWORD — the single vault password.
 # Items are stored plaintext in D1; do not put secrets you cannot afford to
@@ -15,7 +16,23 @@
 
 name = "personal-vault"
 compatibility_date = "2025-02-01"
-pages_build_output_dir = "dist"
+
+# Serve on personal-vault.<account>.workers.dev; no shared preview URLs for a
+# vault (they would expose the same API + D1 to anyone holding the URL).
+workers_dev = true
+preview_urls = false
+
+# Compiled from the functions/ directory by `wrangler pages functions build`
+# (see the package.json build script). Kept outside dist/ so the worker bundle
+# is never served as a static asset.
+main = ".wrangler/worker/index.js"
+
+[assets]
+directory = "./dist"
+# SPA: paths that match no asset fall back to index.html (client-side routing).
+not_found_handling = "single-page-application"
+# /api/* hits the Worker first (auth + data); everything else is static assets.
+run_worker_first = ["/api/*"]
 
 # Binding used by functions/_shared/auth.ts (`env.DB`).
 [[d1_databases]]

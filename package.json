@@ -9,8 +9,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "dev:api": "wrangler pages dev dist --port 8788",
-    "build": "tsc --noEmit && vite build && node scripts/build-pwa.mjs",
+    "dev:api": "wrangler pages functions build --outdir=.wrangler/worker && wrangler dev --port 8787",
+    "build": "tsc --noEmit && vite build && node scripts/build-pwa.mjs && wrangler pages functions build --outdir=.wrangler/worker",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
@@ -19,7 +19,7 @@
     "icons": "node scripts/gen-icons.mjs",
     "pwa:build": "node scripts/build-pwa.mjs",
     "release:check": "pnpm run build && pnpm run test",
-    "deploy": "pnpm run build && wrangler pages deploy dist --project-name personal-vault",
+    "deploy": "pnpm run build && wrangler deploy",
     "audit": "pnpm audit --audit-level=moderate"
   },
   "dependencies": {
