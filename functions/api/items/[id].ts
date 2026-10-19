@@ -7,10 +7,13 @@ import type { PagesFunction } from "../../_shared/http";
 /** Raw-body gate; the client additionally caps the item at 256 KiB. */
 const MAX_BODY_BYTES = 300 * 1024;
 
-function isPlausibleItem(value: unknown): value is { type: string; title: string; updated_at: string } {
+function isPlausibleItem(
+  value: unknown,
+): value is { id: string; type: string; title: string; updated_at: string } {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
+    typeof v.id === "string" &&
     typeof v.type === "string" &&
     typeof v.title === "string" &&
     typeof v.updated_at === "string" &&
@@ -27,7 +30,11 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
 
   const body = await readJsonBody(request, MAX_BODY_BYTES);
   if (!body.ok) return body.response;
-  if (!isPlausibleItem(body.value)) return errorResponse(400, "invalid_item");
+  const value = body.value as Record<string, unknown>;
+  if (!isPlausibleItem(value)) return errorResponse(400, "invalid_item");
+  // The row key and the payload id must agree: the UI keys on the item id, so
+  // a mismatch would fork the record into a second row on the next save.
+  if (value.id !== id) return errorResponse(400, "id_mismatch");
 
   await env.DB.prepare(
     `INSERT INTO items (id, payload, updated_at) VALUES (?, ?, ?)

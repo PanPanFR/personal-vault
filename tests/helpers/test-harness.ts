@@ -48,14 +48,14 @@ export class TestServer {
     if (itemMatch && method === "PUT") {
       return handleItemPut({
         ...baseContext,
-        params: { id: itemMatch[1] },
+        params: { id: decodeURIComponent(itemMatch[1]) },
         functionPath: "/api/items/[id]",
       } as any);
     }
     if (itemMatch && method === "DELETE") {
       return handleItemDelete({
         ...baseContext,
-        params: { id: itemMatch[1] },
+        params: { id: decodeURIComponent(itemMatch[1]) },
         functionPath: "/api/items/[id]",
       } as any);
     }
