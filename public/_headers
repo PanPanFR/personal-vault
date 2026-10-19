@@ -1,20 +1,16 @@
-# Cloudflare Pages response headers  Personal Vault.
+# Cloudflare Pages response headers — Personal Vault.
 #
 # THIS FILE IS A TEMPLATE. `scripts/build-pwa.mjs` rewrites it into dist/_headers
-# with the real CSP and the pinned digest of every shipped .wasm asset.
-# Never hand-edit dist/_headers.
+# with the real CSP. Never hand-edit dist/_headers.
 #
 # Scope: restrictive CSP, no third-party origins, no remote CDN runtime deps,
-# and an explicit no-store rule for the vault API (never let a CDN or the browser
-# HTTP cache hold ciphertext/tokens  PRD FR-3, pwa-operational 3.2).
-#
-# Build-time state: __WASM_HASH_NOTE__
+# and an explicit no-store rule for the vault API (never let a CDN or the
+# browser HTTP cache hold vault data or session tokens).
 #
 # NOTE: Pages applies _headers to STATIC responses. Dynamic /api/* responses are
 # served by Pages Functions, where functions/_shared/http.ts sets no-store +
-# nosniff + no-referrer + DENY on every json()/errorResponse() response. The
-# /api/* block below is defence in depth for any statically served API path.
-# The /* block already covers "/" as well as "/index.html" (identical headers).
+# nosniff + no-referrer + DENY on every response. The /api/* block below is
+# defence in depth for any statically served API path.
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

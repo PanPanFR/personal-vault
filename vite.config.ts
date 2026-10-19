@@ -35,12 +35,16 @@ export default defineConfig({
   },
   define: {
     __APP_VERSION__: JSON.stringify(`${pkg.version}+${gitSha()}`),
-    // Placeholder: scripts/build-pwa.mjs computes the real content-addressed id
-    // from the finished build and stamps it into dist/sw.js.
-    __PV_BUILD_ID__: JSON.stringify("dev"),
+  },
+  server: {
+    // Local dev loop: `pnpm dev` (UI) + `pnpm dev:api` (wrangler pages dev on
+    // :8788 serving pages Functions). UI requests to /api hit the Functions.
+    proxy: {
+      "/api": "http://localhost:8788",
+    },
   },
   build: {
-    // Same-origin only. No CDN, no remote runtime dependency (PRD §9).
+    // Same-origin only. No CDN, no remote runtime dependency.
     assetsInlineLimit: 0,
     target: "es2022",
     sourcemap: false,

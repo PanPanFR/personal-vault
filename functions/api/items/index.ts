@@ -10,9 +10,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const token = await getRequestSession(request, env);
   if (!token) return errorResponse(401, "unauthorized");
 
-  const { results } = await env.DB.prepare(
+  const { results } = (await env.DB.prepare(
     "SELECT payload FROM items ORDER BY updated_at DESC",
-  ).all<{ payload: string }>();
+  ).all()) as { results: { payload: string }[] };
 
   const items = results.flatMap((row) => {
     try {

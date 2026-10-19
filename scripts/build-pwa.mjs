@@ -2,14 +2,12 @@
 /**
  * Personal Vault PWA build step — `scripts/build-pwa.mjs`
  *
- * Runs after `vite build` and materialises everything that must be derived from
- * the finished build (plan/pwa-hardening-release.md steps 2 + 3):
+ * Runs after `vite build` and materialises everything derived from the
+ * finished build:
  *
- *   1. dist/sw.js            per-build cache name + precache manifest from src/sw.js
- *   2. dist/_headers         Pages headers with a real, injected CSP
- *                            (wasm-unsafe-eval + auto-pinned WASM asset hashes)
- *   3. dist/build-manifest.json  pinned digests of every shipped file (integrity
- *                            reference for the release runbook / incident checks)
+ *   1. dist/sw.js        per-build cache name + precache manifest from src/sw.js
+ *   2. dist/_headers     Pages headers with the injected CSP
+ *   3. dist/build-manifest.json  pinned digests of every shipped file
  *
  * Deterministic: same inputs -> same build id. No network access.
  */
@@ -75,17 +73,14 @@ async function renderServiceWorker(buildId, precache) {
 }
 
 /**
- * CSP. `'wasm-unsafe-eval'` is the plan's stated minimum for the crypto path;
- * every shipped `.wasm` asset is additionally pinned by sha256 so a swapped
- * binary cannot be compiled. `style-src` keeps 'unsafe-inline' only because the
- * search overlay sets inline style attributes on operator chips (CSP has no
- * attribute-scoped alternative short of hashing each value).
+ * CSP. `style-src` keeps 'unsafe-inline' only because the search overlay sets
+ * inline style attributes on operator chips (CSP has no attribute-scoped
+ * alternative short of hashing each value).
  */
-function buildCsp({ wasmHashes }) {
-  const scriptHashes = ["'wasm-unsafe-eval'", ...wasmHashes.map((h) => `'sha256-${h}'`)];
+function buildCsp() {
   return [
     "default-src 'self'",
-    `script-src 'self' ${scriptHashes.join(" ")}`,
+    "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
@@ -100,17 +95,9 @@ function buildCsp({ wasmHashes }) {
   ].join("; ");
 }
 
-async function renderHeaders({ wasmHashes }) {
+async function renderHeaders() {
   const template = await readTemplate("public/_headers");
-  return template
-    .replaceAll("__WASM_HASHES__", wasmHashes.map((h) => `'sha256-${h}'`).join(" "))
-    .replaceAll("__CSP__", buildCsp({ wasmHashes }))
-    .replaceAll(
-      "__WASM_HASH_NOTE__",
-      wasmHashes.length > 0
-        ? `# pinned wasm assets: ${wasmHashes.length}`
-        : "# no standalone .wasm asset in this build (pure-JS sumo crypto); 'wasm-unsafe-eval' retained per PRD FR-6",
-    );
+  return template.replaceAll("__CSP__", buildCsp());
 }
 
 export async function buildPwa() {
@@ -126,33 +113,19 @@ export async function buildPwa() {
 
   const precache = files.map((f) => `/${f}`).filter(isPrecacheable).sort();
   const buildId = computeBuildId(digests, precache);
-  const wasmHashes = Object.entries(digests)
-    .filter(([path]) => path.endsWith(".wasm"))
-    .map(([, digest]) => digest)
-    .sort();
 
   await mkdir(DIST, { recursive: true });
   await writeFile(join(DIST, "sw.js"), await renderServiceWorker(buildId, precache), "utf8");
-  await writeFile(join(DIST, "_headers"), await renderHeaders({ wasmHashes }), "utf8");
+  await writeFile(join(DIST, "_headers"), await renderHeaders(), "utf8");
   await writeFile(
     join(DIST, "build-manifest.json"),
-    `${JSON.stringify(
-      {
-        build_id: buildId,
-        cache_name: `pv-shell-v${buildId}`,
-        precache,
-        wasm_hashes: wasmHashes,
-        files: digests,
-      },
-      null,
-      2,
-    )}\n`,
+    `${JSON.stringify({ build_id: buildId, cache_name: `pv-shell-v${buildId}`, precache, files: digests }, null, 2)}\n`,
     "utf8",
   );
 
   // The SW itself must never be cached by an older worker or by the HTTP cache.
   const stats = await stat(join(DIST, "sw.js"));
-  return { buildId, precache, wasmHashes, swBytes: stats.size };
+  return { buildId, precache, swBytes: stats.size };
 }
 
 const invokedDirectly =
@@ -160,13 +133,10 @@ const invokedDirectly =
 
 if (invokedDirectly) {
   buildPwa()
-    .then(({ buildId, precache, wasmHashes }) => {
-      console.log(`[pwa] build id       : ${buildId}`);
-      console.log(`[pwa] cache name     : pv-shell-v${buildId}`);
-      console.log(`[pwa] precached      : ${precache.length} app-shell files`);
-      console.log(
-        `[pwa] pinned wasm    : ${wasmHashes.length > 0 ? wasmHashes.join(", ") : "none (pure-JS sumo crypto)"}`,
-      );
+    .then(({ buildId, precache }) => {
+      console.log(`[pwa] build id   : ${buildId}`);
+      console.log(`[pwa] cache name : pv-shell-v${buildId}`);
+      console.log(`[pwa] precached  : ${precache.length} app-shell files`);
     })
     .catch((err) => {
       console.error(`[pwa] build failed: ${err.message}`);

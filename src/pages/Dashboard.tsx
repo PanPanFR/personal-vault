@@ -4,11 +4,9 @@ import { useItems } from "../hooks/useItems";
 import { useTags } from "../hooks/useTags";
 import { Card } from "../components/ui/Card";
 import { QuickAdd } from "../components/QuickAdd";
-import { SyncStatusPlaceholder } from "../components/SyncStatusPlaceholder";
 import { EmptyState } from "../components/EmptyState";
 import { ItemCard } from "../components/ItemCard";
 import { I18N, t } from "../i18n";
-import { BackupBanner } from "../components/BackupBanner";
 import { InstallPrompt } from "../components/InstallPrompt";
 
 export default function Dashboard() {
@@ -31,10 +29,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">{t(I18N.DASHBOARD_TITLE)}</h1>
-      {/* Persistent on iOS until an encrypted export exists (PRD §5 G11). */}
-      <BackupBanner variant="dashboard" />
       <InstallPrompt />
-      <SyncStatusPlaceholder />
       <QuickAdd />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

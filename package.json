@@ -9,30 +9,25 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:api": "wrangler pages dev dist --port 8788",
     "build": "tsc --noEmit && vite build && node scripts/build-pwa.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "contract-drift": "node scripts/check-contract-drift.mjs",
     "icons": "node scripts/gen-icons.mjs",
     "pwa:build": "node scripts/build-pwa.mjs",
-    "verify:prod": "node scripts/verify-prod-build.mjs",
-    "release:check": "pnpm run build && pnpm run verify:prod && pnpm run test",
+    "release:check": "pnpm run build && pnpm run test",
+    "deploy": "pnpm run build && wrangler pages deploy dist --project-name personal-vault",
     "audit": "pnpm audit --audit-level=moderate"
   },
   "dependencies": {
     "clsx": "^2.1.1",
-    "dexie": "^4.0.10",
-    "libsodium-wrappers-sumo": "0.7.15",
-    "lucide-react": "^0.468.0",
-    "minisearch": "^7.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.0",
     "tailwind-merge": "^2.6.0",
-    "ulid": "^2.3.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -44,11 +39,11 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
-    "fake-indexeddb": "^6.0.0",
     "jsdom": "^25.0.1",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
     "vite": "^6.1.0",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "wrangler": "^4.151.0"
   }
 }

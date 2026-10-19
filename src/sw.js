@@ -19,7 +19,7 @@ const CACHE_NAME = CACHE_PREFIX + BUILD_ID;
 const OFFLINE_URL = "/index.html";
 const PRECACHE_URLS = __PRECACHE_MANIFEST__;
 
-/** Paths the SW must never intercept (vault API: ciphertext, tokens, pairings). */
+/** Paths the SW must never intercept (vault API: items, session tokens). */
 const NEVER_INTERCEPT_PREFIXES = ["/api/", "/functions/"];
 
 /** Allowlist index: cache writes are impossible for anything not listed. */

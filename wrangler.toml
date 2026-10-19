@@ -1,34 +1,25 @@
 # Personal Vault deployment configuration (Cloudflare Pages + D1).
 #
-# Two SEPARATE databases: dev must never touch production data. Destructive
-# release tests (pair/revoke/all-lost recovery) run against `personal-vault-dev`.
+# The whole setup: one Pages project, one D1 database, one secret.
 #
-# Secrets never live here: device tokens are issued per device and stored
-# client-side encrypted. Only binding IDs and the Pages project name are config.
+#   1. npx wrangler d1 create personal-vault
+#      → paste the returned database_id below
+#   2. npx wrangler d1 migrations apply personal-vault --remote   (first deploy)
+#      npx wrangler d1 migrations apply personal-vault --local    (dev)
+#   3. npx wrangler pages secret put PV_PASSWORD --project-name personal-vault
+#   4. pnpm deploy
 #
-# Docs: docs/architecture.md §9 Operations Runbook (setup, migrations, release gate).
+# There is exactly one secret: PV_PASSWORD — the single vault password.
+# Items are stored plaintext in D1; do not put secrets you cannot afford to
+# expose in a database breach.
 
 name = "personal-vault"
 compatibility_date = "2025-02-01"
 pages_build_output_dir = "dist"
 
-# Environment binding used by functions/_shared/auth.ts (`env.DB`).
-# Set this to the DEV database for preview/dev builds and the PROD database for
-# the production branch — do not point a preview at prod.
+# Binding used by functions/_shared/auth.ts (`env.DB`).
 [[d1_databases]]
 binding = "DB"
-database_name = "personal-vault-dev"
-database_id = "REPLACE_WITH_DEV_DATABASE_ID"
+database_name = "personal-vault"
+database_id = "REPLACE_WITH_DATABASE_ID"
 migrations_dir = "migrations"
-
-[[d1_databases]]
-binding = "DB_PROD"
-database_name = "personal-vault-prod"
-database_id = "REPLACE_WITH_PROD_DATABASE_ID"
-migrations_dir = "migrations"
-
-[vars]
-# Surfaced in the UI as an explicit limitation; never a secret.
-VAULT_ENVIRONMENT = "dev"
-
-# Deployment: pnpm release:check && wrangler pages deploy dist --project-name personal-vault
