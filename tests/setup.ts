@@ -1,5 +1,4 @@
 import "@testing-library/jest-dom/vitest";
-import "fake-indexeddb/auto";
 
 // jsdom lacks matchMedia; stub it for theme tests (real browsers provide it).
 if (typeof window !== "undefined" && !window.matchMedia) {

@@ -1,5 +1,8 @@
+import React from "react";
 import { Routes, Route } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
+import { LoginScreen } from "./components/LoginScreen";
+import { useAuth } from "./hooks/useAuth";
 import Dashboard from "./pages/Dashboard";
 import AllItems from "./pages/AllItems";
 import Links from "./pages/Links";
@@ -13,6 +16,12 @@ import Settings from "./pages/Settings";
 import ItemDetail from "./pages/ItemDetail";
 
 export default function App() {
+  const { authed } = useAuth();
+
+  // null = session check in flight; render nothing rather than flash the login.
+  if (authed === null) return null;
+  if (!authed) return <LoginScreen />;
+
   return (
     <Routes>
       <Route element={<AppLayout />}>

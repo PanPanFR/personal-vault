@@ -1,91 +1,59 @@
----
-
 # Personal Vault
 
-Encrypted, local-first personal vault. Zero-knowledge: the server never sees
-plaintext. Two devices converge via cursor-based sync with optimistic
-concurrency; lost devices are re-authorized from an offline recovery kit.
+Single-user vault webapp: links, notes, snippets, credentials. One password,
+plaintext storage on your own Cloudflare account, works from every device.
 
-## Quick start
+## What it is
 
-```bash
-pnpm install
-pnpm dev        # Vite dev server
-pnpm test       # vitest (291 tests)
-pnpm build      # tsc --noEmit + vite build
-pnpm contract-drift   # asserts openapi.yaml matches docs/api-spec.md
-```
+- React SPA (Vite + Tailwind) served by Cloudflare Pages
+- 6-route JSON API in Pages Functions, data in D1 (`items` + `sessions`)
+- Auth = one password (`PV_PASSWORD` Worker secret) → HttpOnly session cookie
+  (90 days), login rate-limited per IP
+- PWA: installable app shell, no offline data cache
 
-## Architecture
-
-| Layer | Where | Stack |
-|---|---|---|
-| UI | `src/components`, `src/pages`, `src/hooks` | React 19, Vite, Tailwind 4 |
-| Crypto | `src/crypto` | libsodium-wrappers-sumo (Argon2id, XChaCha20-Poly1305, Ed25519, HKDF) |
-| Local store | `src/db`, `src/vault` | Dexie / IndexedDB, ciphertext-only at rest |
-| Sync / pairing | `src/sync`, `src/pairing`, `src/recovery`, `src/backup` | outbox + cursor engine |
-| API | `functions/api/v1` | Cloudflare Pages Functions (Workers runtime) |
-| Storage | `migrations/*.sql` | Cloudflare D1 (dev and prod databases are separate) |
-
-## Security model
-
-- **No central credentials.** No accounts, passwords, or server-held secrets.
-- **Device-scoped authority.** Each device holds a 256-bit bearer token (server
-  stores only its SHA-256) plus an Ed25519 keypair. Mutating requests require
-  both, so a stolen token alone cannot mutate records, pair devices, revoke
-  devices, or rotate key envelopes.
-- **Request signing.** `PV-Device: device_id="…", timestamp="…", nonce="…",
-  signature="…"` over `METHOD\nPATH\nTIMESTAMP\nNONCE\nBODY_SHA256_HEX`, with a
-  ±5 minute window and nonce replay detection.
-- **All-devices-lost recovery.** The offline recovery kit is the only path back
-  in; the recovery envelope is delivered solely by
-  `POST /api/v1/recovery/enroll-device`.
-- **No silent overwrites.** Optimistic concurrency (CAS) with explicit conflict
-  resolution; tombstones are never resurrected.
+**Security model, out loud:** items are stored **plaintext** in D1. Sessions
+are opaque random tokens. Anyone with your Cloudflare account or a database
+dump can read everything — that is the deliberate trade for simplicity, not a
+bug. Do not put things in here you cannot afford to lose.
 
 ## API
 
-Nine endpoints under `/api/v1`, frozen in `openapi.yaml` and specified
-normatively in `docs/api-spec.md`:
-
 | Method | Path | Auth |
 |---|---|---|
-| POST | `/vaults` | none (3/IP/hour) |
-| GET | `/vaults/:vaultId/bootstrap` | bearer |
-| GET | `/sync` | bearer (300/vault/hour) |
-| POST | `/sync/batch` | bearer + signature (120/vault/hour) |
-| POST | `/pairing-tickets` | bearer + signature (5/device/hour) |
-| POST | `/pairing/exchange` | ticket knowledge (10/vault/hour) |
-| POST | `/devices/:deviceId/revoke` | bearer + signature |
-| PUT | `/vault/crypto-metadata` | bearer + signature (10/vault/hour) |
-| POST | `/recovery/enroll-device` | recovery token (5/vault/hour, backoff) |
+| POST | `/api/login` `{password}` | none (rate-limited) |
+| GET | `/api/session` | cookie |
+| POST | `/api/logout` | cookie |
+| GET | `/api/items` | cookie |
+| PUT | `/api/items/:id` (full item JSON, ≤256 KiB) | cookie |
+| DELETE | `/api/items/:id` | cookie |
 
-Every response carries `Cache-Control: no-store`, `X-Server-Time` and the
-standard security headers. Errors use the frozen 18-code envelope.
-
-## Database migrations
+## Local development
 
 ```bash
-wrangler d1 migrations apply personal-vault-db --local   # dev
-wrangler d1 migrations apply personal-vault-db           # prod
+pnpm install
+pnpm build                 # needed once: wrangler serves dist/
+npx wrangler d1 migrations apply personal-vault --local
+echo "PV_PASSWORD=dev-password" > .dev.vars
+
+pnpm dev:api               # Pages Functions on :8788
+pnpm dev                   # UI on :5173, /api proxied to :8788
 ```
 
-`0001_init.sql` is the frozen schema (vaults, vault_records,
-authorized_devices, pairing_tickets, sync_changes). `0002` adds the rate-limit
-counters, request-nonce replay table, and mutation idempotency keys required by
-Appendix B rate limits and §11 idempotency.
+```bash
+pnpm test                  # vitest (API against in-memory sqlite + UI)
+pnpm typecheck
+pnpm build                 # tsc + vite + PWA stamping (dist/sw.js, dist/_headers)
+```
 
-## Documentation
+## Deploy
 
-| Area | Path |
-|---|---|
-| Product requirements | `personal-vault-prd-v3.md` |
-| Backend contracts | `docs/api-spec.md`, `docs/sync-protocol.md`, `docs/data-model.md`, `docs/crypto-spec.md`, `docs/device-pairing-recovery.md` |
-| Architecture & runbook | `docs/architecture.md` |
-| Security | `docs/security-threat-model.md` |
-| Frontend / UX | `docs/ui-ux.md`, `docs/pwa-operational.md` |
-| Architecture decisions | `docs/decisions.md` |
+```bash
+npx wrangler d1 create personal-vault      # paste database_id into wrangler.toml
+npx wrangler d1 migrations apply personal-vault --remote
+npx wrangler pages secret put PV_PASSWORD --project-name personal-vault
+pnpm deploy                                # build + wrangler pages deploy dist
+```
 
-Precedence on any discrepancy: **PRD > api-spec.md > openapi.yaml > code**.
-Adding or renaming fields or error codes requires a formal contract revision,
-enforced by `pnpm contract-drift`.
+To change the password later: re-run the `pages secret put` command. Existing
+sessions keep working; delete rows from `sessions` (or just log out per device)
+if you want to force re-login.

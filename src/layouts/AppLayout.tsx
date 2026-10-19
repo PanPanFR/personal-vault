@@ -1,10 +1,8 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useItems } from "../hooks/useItems";
-import { SyncStatusPlaceholder } from "../components/SyncStatusPlaceholder";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { SearchOverlay } from "../components/SearchOverlay";
-import { seedIfEmpty } from "../db/seed";
 import { t, I18N } from "../i18n";
 
 const navItems = [
@@ -22,10 +20,6 @@ const navItems = [
 
 export default function AppLayout() {
   const { items } = useItems();
-
-  useEffect(() => {
-    seedIfEmpty();
-  }, []);
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas)] text-[var(--color-text)]">
@@ -58,7 +52,6 @@ export default function AppLayout() {
             ))}
           </nav>
           <div className="space-y-2 p-3">
-            <SyncStatusPlaceholder />
             <ThemeToggle />
           </div>
         </aside>

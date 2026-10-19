@@ -1,13 +1,16 @@
+// Test harness: routes requests straight to Pages Functions handlers with an
+// in-memory sqlite D1. Same-origin, no network.
 import { createMockD1, type D1Database } from "./mock-d1";
-import { onRequestPost as handleVaultsPost } from "../../functions/api/v1/vaults";
-import { onRequestGet as handleBootstrapGet } from "../../functions/api/v1/vaults/[vaultId]/bootstrap";
-import { onRequestGet as handleSyncGet } from "../../functions/api/v1/sync";
-import { onRequestPost as handleSyncBatchPost } from "../../functions/api/v1/sync/batch";
-import { onRequestPost as handlePairingTicketsPost } from "../../functions/api/v1/pairing-tickets";
-import { onRequestPost as handlePairingExchangePost } from "../../functions/api/v1/pairing/exchange";
-import { onRequestPost as handleDeviceRevokePost } from "../../functions/api/v1/devices/[deviceId]/revoke";
-import { onRequestPut as handleCryptoMetadataPut } from "../../functions/api/v1/vault/crypto-metadata";
-import { onRequestPost as handleRecoveryEnrollPost } from "../../functions/api/v1/recovery/enroll-device";
+import { onRequestPost as handleLogin } from "../../functions/api/login";
+import { onRequestGet as handleSession } from "../../functions/api/session";
+import { onRequestPost as handleLogout } from "../../functions/api/logout";
+import { onRequestGet as handleItemsList } from "../../functions/api/items/index";
+import {
+  onRequestPut as handleItemPut,
+  onRequestDelete as handleItemDelete,
+} from "../../functions/api/items/[id]";
+
+export const TEST_PASSWORD = "correct-horse-battery";
 
 export class TestServer {
   public db: D1Database;
@@ -22,48 +25,56 @@ export class TestServer {
     const method = (init?.method ?? "GET").toUpperCase();
 
     const request = new Request(url.toString(), init);
-    const env = { DB: this.db };
+    const env = { DB: this.db, PV_PASSWORD: TEST_PASSWORD };
+    const baseContext = { request, env, data: {}, waitUntil: () => {}, next: () => Promise.resolve(new Response()) };
 
-    // Route matching
-    if (pathname === "/api/v1/vaults" && method === "POST") {
-      return handleVaultsPost({ request, env, params: {}, data: {}, waitUntil: () => {}, next: () => Promise.resolve(new Response()) } as any);
+    if (pathname === "/api/login" && method === "POST") {
+      return handleLogin({ ...baseContext, params: {}, functionPath: "/api/login" } as any);
     }
 
-    const bootstrapMatch = pathname.match(/^\/api\/v1\/vaults\/([^/]+)\/bootstrap$/);
-    if (bootstrapMatch && method === "GET") {
-      return handleBootstrapGet({ request, env, params: { vaultId: bootstrapMatch[1] }, data: {}, waitUntil: () => {}, next: () => Promise.resolve(new Response()) } as any);
+    if (pathname === "/api/session" && method === "GET") {
+      return handleSession({ ...baseContext, params: {}, functionPath: "/api/session" } as any);
     }
 
-    if (pathname === "/api/v1/sync" && method === "GET") {
-      return handleSyncGet({ request, env, params: {}, data: {}, waitUntil: () => {}, next: () => Promise.resolve(new Response()) } as any);
+    if (pathname === "/api/logout" && method === "POST") {
+      return handleLogout({ ...baseContext, params: {}, functionPath: "/api/logout" } as any);
     }
 
-    if (pathname === "/api/v1/sync/batch" && method === "POST") {
-      return handleSyncBatchPost({ request, env, params: {}, data: {}, waitUntil: () => {}, next: () => Promise.resolve(new Response()) } as any);
+    if (pathname === "/api/items" && method === "GET") {
+      return handleItemsList({ ...baseContext, params: {}, functionPath: "/api/items" } as any);
     }
 
-    if (pathname === "/api/v1/pairing-tickets" && method === "POST") {
-      return handlePairingTicketsPost({ request, env, params: {}, data: {}, waitUntil: () => {}, next: () => Promise.resolve(new Response()) } as any);
+    const itemMatch = pathname.match(/^\/api\/items\/([^/]+)$/);
+    if (itemMatch && method === "PUT") {
+      return handleItemPut({
+        ...baseContext,
+        params: { id: decodeURIComponent(itemMatch[1]) },
+        functionPath: "/api/items/[id]",
+      } as any);
+    }
+    if (itemMatch && method === "DELETE") {
+      return handleItemDelete({
+        ...baseContext,
+        params: { id: decodeURIComponent(itemMatch[1]) },
+        functionPath: "/api/items/[id]",
+      } as any);
     }
 
-    if (pathname === "/api/v1/pairing/exchange" && method === "POST") {
-      return handlePairingExchangePost({ request, env, params: {}, data: {}, waitUntil: () => {}, next: () => Promise.resolve(new Response()) } as any);
-    }
+    return new Response(JSON.stringify({ error: "not_found" }), { status: 404 });
+  }
 
-    const revokeMatch = pathname.match(/^\/api\/v1\/devices\/([^/]+)\/revoke$/);
-    if (revokeMatch && method === "POST") {
-      return handleDeviceRevokePost({ request, env, params: { deviceId: revokeMatch[1] }, data: {}, waitUntil: () => {}, next: () => Promise.resolve(new Response()) } as any);
-    }
-
-    if (pathname === "/api/v1/vault/crypto-metadata" && method === "PUT") {
-      return handleCryptoMetadataPut({ request, env, params: {}, data: {}, waitUntil: () => {}, next: () => Promise.resolve(new Response()) } as any);
-    }
-
-    if (pathname === "/api/v1/recovery/enroll-device" && method === "POST") {
-      return handleRecoveryEnrollPost({ request, env, params: {}, data: {}, waitUntil: () => {}, next: () => Promise.resolve(new Response()) } as any);
-    }
-
-    return new Response(JSON.stringify({ code: "NOT_FOUND", message: "Not found", retryable: false }), { status: 404 });
+  /** Log in and return the Cookie header value for subsequent requests. */
+  public async login(password: string = TEST_PASSWORD): Promise<string> {
+    const res = await this.fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    if (!res.ok) throw new Error(`login failed: ${res.status}`);
+    const setCookie = res.headers.get("Set-Cookie") ?? "";
+    const cookie = setCookie.split(";")[0];
+    if (!cookie) throw new Error("no session cookie in login response");
+    return cookie;
   }
 
   public close(): void {

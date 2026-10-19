@@ -1,14 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
-import { CleanStart } from "./components/CleanStart";
+import { AuthProvider } from "./hooks/useAuth";
 import { registerServiceWorker } from "./sw-update";
 import { watchInstallPrompt } from "./pwa/platform";
-import { detectStorageEviction, shouldShowCleanStart, type EvictionCheck } from "./pwa/eviction";
-import { createDb } from "./db/dexie-schema";
 import { getLocale } from "./i18n";
-import { deviceLocale } from "./settings/store";
+import type { Locale } from "./i18n/keys";
 import "./index.css";
 
 // Theme before paint: system preference by default, explicit choice wins.
@@ -21,62 +19,24 @@ if (storedTheme === "dark") {
   document.documentElement.classList.add("dark");
 }
 
-// Locale default = device locale, fallback ID.
-const initialLocale = getLocale() === "en" ? "en" : deviceLocale();
-document.documentElement.lang = initialLocale;
-
-/**
- * iOS ITP gate (PRD §5 G11): if local storage was evicted while the app shell
- * survived, render the clean start instead of an empty/half vault.
- */
-function Root() {
-  const [eviction, setEviction] = useState<EvictionCheck | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    const db = createDb();
-    void detectStorageEviction(db)
-      .then((check) => {
-        if (!cancelled) setEviction(check);
-      })
-      .catch(() => {
-        // Detection is best-effort: never block the app on it.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (eviction && shouldShowCleanStart(eviction)) {
-    return (
-      <CleanStart
-        wasEvicted={eviction.state === "evicted"}
-        onRestoreFromKit={() => {
-          window.location.assign("/?restore=recovery-kit");
-        }}
-        onPairDevice={() => {
-          window.location.assign("/?pair=1");
-        }}
-        onCreateVault={() => {
-          window.location.assign("/?create=1");
-        }}
-        onImportExport={() => {
-          window.location.assign("/?import=1");
-        }}
-      />
-    );
+// Locale default = stored choice, else device locale (Indonesian devices → id).
+function deviceLocale(): Locale {
+  try {
+    return navigator.language.toLowerCase().startsWith("id") ? "id" : "en";
+  } catch {
+    return "en";
   }
-
-  return (
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  );
 }
+const initialLocale = getLocale() === "en" ? deviceLocale() : getLocale();
+document.documentElement.lang = initialLocale;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <Root />
+    <AuthProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </AuthProvider>
   </React.StrictMode>,
 );
 

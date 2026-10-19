@@ -8,8 +8,6 @@ import type { ItemWithId } from "../lib/types";
 
 interface Props {
   items: ItemWithId[];
-  /** Crypto plan injects its MiniSearch implementation here (same signature). */
-  onSearch?: (query: string) => ItemWithId[];
 }
 
 const OPERATOR_CHIPS = [
@@ -22,7 +20,7 @@ const OPERATOR_CHIPS = [
   { op: "AND", color: "var(--ctp-surface0)", fg: "var(--color-text)" },
 ];
 
-export function SearchOverlay({ items, onSearch }: Props) {
+export function SearchOverlay({ items }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -46,8 +44,7 @@ export function SearchOverlay({ items, onSearch }: Props) {
 
   if (!open) return null;
 
-  const searchFn = onSearch ?? ((q) => runSearch(items, q));
-  const results = query.trim() ? searchFn(query) : [];
+  const results = query.trim() ? runSearch(items, query) : [];
 
   return (
     <div

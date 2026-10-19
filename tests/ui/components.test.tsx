@@ -6,7 +6,6 @@ import { ItemForm } from "../../src/components/ItemForm";
 import { TagInput } from "../../src/components/TagInput";
 import { SearchOverlay } from "../../src/components/SearchOverlay";
 import { ThemeToggle } from "../../src/components/ThemeToggle";
-import { SyncStatusPlaceholder } from "../../src/components/SyncStatusPlaceholder";
 import { EmptyState } from "../../src/components/EmptyState";
 import type { Item, ItemWithId } from "../../src/lib/types";
 
@@ -116,7 +115,7 @@ describe("SearchOverlay", () => {
   });
 });
 
-describe("ThemeToggle + SyncStatusPlaceholder + EmptyState", () => {
+describe("ThemeToggle + EmptyState", () => {
   it("toggles theme and persists", async () => {
     const user = userEvent.setup();
     localStorage.clear();
@@ -126,11 +125,6 @@ describe("ThemeToggle + SyncStatusPlaceholder + EmptyState", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     localStorage.clear();
     document.documentElement.classList.remove("dark");
-  });
-
-  it("shows not-connected placeholder", () => {
-    render(<SyncStatusPlaceholder />);
-    expect(screen.getByText(/not connected/i)).toBeInTheDocument();
   });
 
   it("renders empty state with action", () => {

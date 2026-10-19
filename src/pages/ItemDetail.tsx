@@ -181,7 +181,6 @@ export default function ItemDetail() {
                   >
                     {revealed ? t(I18N.HIDE) : t(I18N.REVEAL)}
                   </Button>
-                  {/* Placeholder copy: full Clipboard + retention warning in crypto plan */}
                   <Button
                     size="sm"
                     variant="ghost"

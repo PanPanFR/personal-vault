@@ -21,7 +21,7 @@ export function UpdateNotice() {
         className="rounded-md border border-[var(--color-border)] bg-[var(--ctp-surface0)] px-3 py-2 text-xs"
       >
         {state.buildId ? `Update ready (build ${state.buildId}). ` : "Update ready. "}
-        Reload to apply — your vault stays encrypted and intact during the swap.
+        Reload to apply the new version.
       </div>
     );
   }

@@ -1,3 +1,7 @@
+// Shared HTTP helpers for the vault API. Minimal on purpose: JSON responses
+// with no-store security headers, a size-gated JSON body reader, and a cookie
+// parser. No crypto lives here.
+
 export interface EventContext<Env = any, P extends string = any, Data = any> {
   request: Request;
   functionPath: string;
@@ -22,77 +26,50 @@ export const SECURITY_HEADERS: Record<string, string> = {
   "X-Frame-Options": "DENY",
 };
 
-export function serverTime(date = new Date()): string {
-  return date.toISOString();
-}
-
 export function json(
   data: unknown,
   status = 200,
   extraHeaders: Record<string, string> = {},
 ): Response {
-  const headers = new Headers({
-    "Content-Type": "application/json; charset=utf-8",
-    ...SECURITY_HEADERS,
-    "X-Server-Time": serverTime(),
-    ...extraHeaders,
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json; charset=utf-8", ...SECURITY_HEADERS, ...extraHeaders },
   });
-  return new Response(JSON.stringify(data), { status, headers });
 }
 
-export function errorResponse(
-  code: string,
-  message: string,
-  status: number,
-  retryable: boolean,
-  retryAfter?: number,
-): Response {
-  const extra: Record<string, string> = {};
-  if (retryAfter !== undefined) {
-    extra["Retry-After"] = String(retryAfter);
-  }
-  return json({ code, message, retryable }, status, extra);
+export function errorResponse(status: number, code: string): Response {
+  return json({ error: code }, status);
 }
 
 export function bytesLength(s: string): number {
   return new TextEncoder().encode(s).length;
 }
 
-/**
- * Read a JSON request body with a hard pre-parse size gate. Enforced on the
- * RAW bytes before JSON.parse so an oversized body can never be materialised
- * as an object (api-spec 1.5 caps, threat-model 7). Works even when
- * Content-Length is absent or lying.
- */
-export const MAX_JSON_BODY_BYTES = 1024 * 1024; // 1 MiB
+export type ReadBodyResult =
+  | { ok: true; value: any }
+  | { ok: false; response: Response };
 
-export async function readJsonBody(
-  request: Request,
-  maxBytes: number = MAX_JSON_BODY_BYTES,
-): Promise<{ ok: true; value: any; raw: string } | { ok: false; response: Response }> {
+/** Size-gated JSON body reader: cap enforced on raw bytes before JSON.parse. */
+export async function readJsonBody(request: Request, maxBytes: number): Promise<ReadBodyResult> {
   const raw = await request.text();
   if (bytesLength(raw) > maxBytes) {
-    return {
-      ok: false,
-      response: errorResponse(
-        "PAYLOAD_TOO_LARGE",
-        `Request body exceeds ${Math.floor(maxBytes / 1024)} KiB limit.`,
-        413,
-        false,
-      ),
-    };
+    return { ok: false, response: errorResponse(413, "payload_too_large") };
   }
   try {
-    return { ok: true, value: JSON.parse(raw), raw };
+    return { ok: true, value: JSON.parse(raw) };
   } catch {
-    return {
-      ok: false,
-      response: errorResponse(
-        "VALIDATION_ERROR",
-        "Request body is not valid JSON.",
-        400,
-        false,
-      ),
-    };
+    return { ok: false, response: errorResponse(400, "invalid_json") };
   }
+}
+
+export function parseCookies(request: Request): Record<string, string> {
+  const out: Record<string, string> = {};
+  const raw = request.headers.get("Cookie");
+  if (!raw) return out;
+  for (const part of raw.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq === -1) continue;
+    out[part.slice(0, eq).trim()] = decodeURIComponent(part.slice(eq + 1).trim());
+  }
+  return out;
 }
