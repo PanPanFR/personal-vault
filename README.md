@@ -47,6 +47,22 @@ pnpm build                 # tsc + vite + PWA stamping (dist/sw.js, dist/_header
 
 ## Deploy
 
+Two supported paths:
+
+**A. Git-connected (push to deploy).** Connect the GitHub repo once in the
+Cloudflare dashboard (Workers & Pages → Create → Pages → Connect to Git), then
+every push to `main` builds and deploys.
+
+- Production branch: `main`
+- Build command: `pnpm build`
+- Build output directory: `dist`
+- Node version: set env var `NODE_VERSION` = `22` (optional but deterministic)
+- D1 binding `DB` comes from `wrangler.toml` (verify it under
+  Settings → Functions → D1 database bindings)
+- Secret: Settings → Environment variables → add `PV_PASSWORD` (Secret), production
+
+**B. Direct upload (CLI).**
+
 ```bash
 npx wrangler d1 create personal-vault      # paste database_id into wrangler.toml
 npx wrangler d1 migrations apply personal-vault --remote
@@ -54,6 +70,7 @@ npx wrangler pages secret put PV_PASSWORD --project-name personal-vault
 pnpm deploy                                # build + wrangler pages deploy dist
 ```
 
-To change the password later: re-run the `pages secret put` command. Existing
+To change the password later: re-run the `pages secret put` command (or edit the
+dashboard env var). Existing
 sessions keep working; delete rows from `sessions` (or just log out per device)
 if you want to force re-login.
