@@ -18,7 +18,8 @@
     "test:watch": "vitest",
     "icons": "node scripts/gen-icons.mjs",
     "pwa:build": "node scripts/build-pwa.mjs",
-    "release:check": "pnpm run build && pnpm run test",
+    "verify:prod": "node scripts/verify-prod-build.mjs",
+    "release:check": "pnpm run build && pnpm run test && pnpm run verify:prod",
     "deploy": "pnpm run build && wrangler deploy",
     "audit": "pnpm audit --audit-level=moderate"
   },

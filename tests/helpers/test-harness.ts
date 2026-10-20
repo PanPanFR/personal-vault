@@ -1,4 +1,4 @@
-// Test harness: routes requests straight to Pages Functions handlers with an
+// Test harness: routes requests straight to the Worker function handlers with an
 // in-memory sqlite D1. Same-origin, no network.
 import { createMockD1, type D1Database } from "./mock-d1";
 import { onRequestPost as handleLogin } from "../../functions/api/login";

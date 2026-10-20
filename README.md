@@ -5,8 +5,8 @@ plaintext storage on your own Cloudflare account, works from every device.
 
 ## What it is
 
-- React SPA (Vite + Tailwind) served by Cloudflare Pages
-- 6-route JSON API in Pages Functions, data in D1 (`items` + `sessions`)
+- React SPA (Vite + Tailwind) served by Cloudflare Workers (static assets)
+- 6-route JSON API in Worker functions (`functions/`), data in D1 (`items` + `sessions`)
 - Auth = one password (`PV_PASSWORD` Worker secret) → HttpOnly session cookie
   (90 days), login rate-limited per IP
 - PWA: installable app shell, no offline data cache

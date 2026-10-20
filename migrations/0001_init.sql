@@ -5,7 +5,7 @@
 -- opaque session tokens kept here.
 
 CREATE TABLE IF NOT EXISTS items (
-  id         TEXT PRIMARY KEY,          -- ULID, client-generated
+  id         TEXT PRIMARY KEY,          -- UUIDv4, client-generated
   payload    TEXT NOT NULL,             -- full item JSON as the client uses it
   updated_at TEXT NOT NULL              -- ISO-8601, mirrors payload.updated_at
 );
