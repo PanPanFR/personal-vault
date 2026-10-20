@@ -161,7 +161,10 @@ describe("useItems against the items API", () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const baseFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
+    const baseFetch = globalThis.fetch as unknown as (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => Promise<Response>;
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
