@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useItems } from "../hooks/useItems";
 import { useTags } from "../hooks/useTags";
-import { ItemCard } from "../components/ItemCard";
+import { ItemGrid } from "../components/ItemGrid";
+import { TagChip } from "../components/TagChip";
 import { EmptyState } from "../components/EmptyState";
 import { Card } from "../components/ui/Card";
 import { I18N, t } from "../i18n";
@@ -15,9 +16,13 @@ export default function Tags() {
   const [active, setActive] = useState<string | null>(routeTag ?? null);
   const selected = routeTag ?? active;
 
-  const filtered = selected
-    ? items.filter((i) => i.tags.includes(selected) && !i.is_archived)
-    : [];
+  const filtered = useMemo(
+    () =>
+      selected
+        ? items.filter((item) => item.tags.includes(selected) && !item.is_archived)
+        : [],
+    [items, selected],
+  );
 
   return (
     <div className="space-y-4">
@@ -28,22 +33,16 @@ export default function Tags() {
         <Card className="p-4">
           <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
-              <button
+              <TagChip
                 key={tag.name}
-                type="button"
+                name={tag.name}
+                count={tag.count}
+                active={selected === tag.name}
                 onClick={() => {
                   setActive(tag.name);
                   navigate(`/tags/${encodeURIComponent(tag.name)}`);
                 }}
-                aria-pressed={selected === tag.name}
-                className={`rounded-full px-3 py-1 text-xs ${
-                  selected === tag.name
-                    ? "bg-[var(--color-primary)] text-white"
-                    : "bg-[var(--ctp-surface0)]"
-                }`}
-              >
-                {tag.name} ({tag.count})
-              </button>
+              />
             ))}
           </div>
         </Card>
@@ -54,11 +53,7 @@ export default function Tags() {
           {filtered.length === 0 ? (
             <EmptyState title={t(I18N.EMPTY_STATE)} />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((it) => (
-                <ItemCard key={it.id} item={it} onOpen={(id) => navigate(`/items/${id}`)} />
-              ))}
-            </div>
+            <ItemGrid items={filtered} onOpen={(id) => navigate(`/items/${id}`)} />
           )}
         </section>
       )}

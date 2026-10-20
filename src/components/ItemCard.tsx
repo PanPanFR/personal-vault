@@ -1,7 +1,14 @@
 import React from "react";
 import { Card } from "./ui/Card";
 import { Badge } from "./ui/Badge";
-import type { ItemWithId } from "../lib/types";
+import type { ItemWithId, ItemType } from "../lib/types";
+
+const TYPE_COLORS: Record<ItemType, string> = {
+  link: "#1e66f5",
+  note: "#8839ef",
+  snippet: "#7287fd",
+  credential: "#40a02b",
+};
 
 export function ItemCard({
   item,
@@ -12,12 +19,6 @@ export function ItemCard({
   mode?: "list" | "card";
   onOpen: (id: string) => void;
 }) {
-  const typeColor: Record<string, string> = {
-    link: "#1e66f5",
-    note: "#8839ef",
-    snippet: "#7287fd",
-    credential: "#40a02b",
-  };
   const subtitle =
     item.type === "link"
       ? item.url
@@ -37,7 +38,7 @@ export function ItemCard({
           aria-label={`${item.type}: ${item.title}`}
         >
           <div className="flex items-center gap-2">
-            <Badge color={typeColor[item.type]}>{item.type}</Badge>
+            <Badge color={TYPE_COLORS[item.type]}>{item.type}</Badge>
             {item.is_favorite && (
               <span aria-label="favorite">★</span>
             )}

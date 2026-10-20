@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PLAINTEXT_ITEM_CAP_BYTES } from "./limits";
+import { jsonByteLength } from "./bytes";
 
 const ISO_DATE = z.string().min(1);
 
@@ -7,6 +8,7 @@ const tagSchema = z
   .string()
   .min(1)
   .max(64)
+  // eslint-disable-next-line no-control-regex -- control characters are rejected on purpose
   .refine((t) => !/[\x00-\x1f\x7f]/.test(t), "tag contains control character")
   .refine((t) => !t.includes('"'), "tag must not contain double quote");
 
@@ -64,14 +66,6 @@ export type NoteItem = z.infer<typeof NoteItemSchema>;
 export type SnippetItem = z.infer<typeof SnippetItemSchema>;
 export type CredentialItem = z.infer<typeof CredentialItemSchema>;
 
-export function validateTags(tags: unknown): string[] {
-  return tagsSchema.parse(tags) as string[];
-}
-
-export function serializedJsonBytes(value: unknown): number {
-  return new TextEncoder().encode(JSON.stringify(value)).length;
-}
-
 export class PlaintextTooLargeError extends Error {
   constructor(size: number) {
     super(`Plaintext item ${size} bytes exceeds cap ${PLAINTEXT_ITEM_CAP_BYTES}`);
@@ -80,7 +74,7 @@ export class PlaintextTooLargeError extends Error {
 }
 
 export function assertPlaintextSize(value: unknown): void {
-  const size = serializedJsonBytes(value);
+  const size = jsonByteLength(value);
   if (size > PLAINTEXT_ITEM_CAP_BYTES) throw new PlaintextTooLargeError(size);
 }
 

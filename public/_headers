@@ -1,4 +1,4 @@
-# Cloudflare Pages response headers — Personal Vault.
+# Cloudflare Workers static-asset response headers - Personal Vault.
 #
 # THIS FILE IS A TEMPLATE. `scripts/build-pwa.mjs` rewrites it into dist/_headers
 # with the real CSP. Never hand-edit dist/_headers.
@@ -7,8 +7,8 @@
 # and an explicit no-store rule for the vault API (never let a CDN or the
 # browser HTTP cache hold vault data or session tokens).
 #
-# NOTE: Pages applies _headers to STATIC responses. Dynamic /api/* responses are
-# served by Pages Functions, where functions/_shared/http.ts sets no-store +
+# NOTE: Workers applies _headers to STATIC responses. Dynamic /api/* responses are
+# served by the Worker, where functions/_shared/http.ts sets no-store +
 # nosniff + no-referrer + DENY on every response. The /api/* block below is
 # defence in depth for any statically served API path.
 

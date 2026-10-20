@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useItems } from "../hooks/useItems";
 import { useTags } from "../hooks/useTags";
 import { Card } from "../components/ui/Card";
 import { QuickAdd } from "../components/QuickAdd";
 import { EmptyState } from "../components/EmptyState";
-import { ItemCard } from "../components/ItemCard";
+import { ItemGrid } from "../components/ItemGrid";
+import { TagChip } from "../components/TagChip";
 import { I18N, t } from "../i18n";
 import { InstallPrompt } from "../components/InstallPrompt";
 
@@ -15,9 +16,16 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
-  const filtered = activeTag ? items.filter((i) => i.tags.includes(activeTag) && !i.is_archived) : items.filter((i) => !i.is_archived);
-  const recent = filtered.slice(0, 6);
-  const favorites = items.filter((i) => i.is_favorite && !i.is_archived).slice(0, 5);
+  const live = useMemo(() => items.filter((item) => !item.is_archived), [items]);
+  const visible = useMemo(
+    () => (activeTag ? live.filter((item) => item.tags.includes(activeTag)) : live),
+    [live, activeTag],
+  );
+  const recent = visible.slice(0, 6);
+  const favorites = useMemo(
+    () => live.filter((item) => item.is_favorite).slice(0, 5),
+    [live],
+  );
 
   const categories = [
     { label: t(I18N.LINKS), to: "/links", count: items.filter((i) => i.type === "link").length },
@@ -48,14 +56,13 @@ export default function Dashboard() {
           <h2 className="mb-2 text-lg font-semibold">{t(I18N.TAG_FILTERS)}</h2>
           <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
-              <button
+              <TagChip
                 key={tag.name}
-                type="button"
+                name={tag.name}
+                count={tag.count}
+                active={activeTag === tag.name}
                 onClick={() => setActiveTag(activeTag === tag.name ? null : tag.name)}
-                className={`rounded-full px-3 py-1 text-xs ${activeTag === tag.name ? "bg-[var(--color-primary)] text-white" : "bg-[var(--ctp-surface0)]"}`}
-              >
-                {tag.name} ({tag.count})
-              </button>
+              />
             ))}
           </div>
         </div>
@@ -64,9 +71,7 @@ export default function Dashboard() {
       {favorites.length > 0 && (
         <section>
           <h2 className="mb-2 text-lg font-semibold">{t(I18N.FAVORITES)}</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {favorites.map((it) => <ItemCard key={it.id} item={it} onOpen={(id) => navigate(`/items/${id}`)} />)}
-          </div>
+          <ItemGrid items={favorites} onOpen={(id) => navigate(`/items/${id}`)} />
         </section>
       )}
 
@@ -75,9 +80,7 @@ export default function Dashboard() {
         {recent.length === 0 ? (
           <EmptyState title={t(I18N.EMPTY_STATE)} description="Use Quick Add to create your first item." />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {recent.map((it) => <ItemCard key={it.id} item={it} onOpen={(id) => navigate(`/items/${id}`)} />)}
-          </div>
+          <ItemGrid items={recent} onOpen={(id) => navigate(`/items/${id}`)} />
         )}
       </section>
     </div>

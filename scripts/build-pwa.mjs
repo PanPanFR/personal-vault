@@ -6,7 +6,7 @@
  * finished build:
  *
  *   1. dist/sw.js        per-build cache name + precache manifest from src/sw.js
- *   2. dist/_headers     Pages headers with the injected CSP
+ *   2. dist/_headers     response headers with the injected CSP
  *   3. dist/build-manifest.json  pinned digests of every shipped file
  *
  * Deterministic: same inputs -> same build id. No network access.

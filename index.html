@@ -4,8 +4,8 @@
 
   Header/meta reconciliation owner: plan/pwa-hardening-release.md.
   Security headers (CSP, nosniff, referrer, frames) are served by
-  dist/_headers (Cloudflare Pages), NOT by a meta tag — a meta CSP cannot express
-  frame-ancestors and is trivially bypassed by a stray header.
+  dist/_headers (Cloudflare Workers static assets), NOT by a meta tag — a meta CSP
+  cannot express frame-ancestors and is trivially bypassed by a stray header.
 
   Installability: web manifest + iOS touch icon + standalone display.
   Browser fallback: the app renders and works in any tab, install is optional.

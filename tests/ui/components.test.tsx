@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { ItemForm } from "../../src/components/ItemForm";
@@ -107,7 +107,7 @@ describe("SearchOverlay", () => {
     const user = userEvent.setup();
     renderWithRouter(<SearchOverlay items={fixtureItems} />);
     await user.keyboard("{Control>}k{/Control}");
-    for (const chip of ["type:", "tag:", "is:", "created:", "updated:"]) {
+    for (const chip of ["type:", "tag:", "is:", "AND"]) {
       expect(screen.getByText(chip)).toBeInTheDocument();
     }
     await user.type(screen.getByRole("combobox"), "hello");

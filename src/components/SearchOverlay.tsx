@@ -14,8 +14,6 @@ const OPERATOR_CHIPS = [
   { op: "type:", color: "var(--ctp-blue)", fg: "#fff" },
   { op: "tag:", color: "var(--ctp-green)", fg: "#fff" },
   { op: "is:", color: "var(--ctp-mauve)", fg: "#fff" },
-  { op: "created:", color: "var(--ctp-sky)", fg: "#fff" },
-  { op: "updated:", color: "var(--ctp-yellow)", fg: "#4c4f69" },
   { op: '"phrase"', color: "var(--ctp-surface0)", fg: "var(--color-text)" },
   { op: "AND", color: "var(--ctp-surface0)", fg: "var(--color-text)" },
 ];

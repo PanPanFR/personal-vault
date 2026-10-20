@@ -1,6 +1,6 @@
 // Bilingual ID+EN dictionaries. `t(key)` returns the CURRENT locale.
-// Settings switcher writes `pv-locale`; default locale follows the device
-// (Indonesian devices → id), falling back to EN.
+// Settings switcher writes `pv-locale`; without a stored choice the locale
+// follows the device (Indonesian devices → id), falling back to EN.
 import { I18N, LOCALE_STORAGE_KEY, type I18nKey, type Locale } from "./keys";
 
 const en: Record<I18nKey, string> = {
@@ -143,13 +143,27 @@ const id: Record<I18nKey, string> = {
 
 const DICTS: Record<Locale, Record<I18nKey, string>> = { en, id };
 
-let current: Locale = "en";
-try {
-  const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
-  if (stored === "en" || stored === "id") current = stored;
-} catch {
-  // SSR/tests without localStorage — default EN.
+/** Indonesian devices default to ID, everything else to EN. */
+function deviceLocale(): Locale {
+  try {
+    return navigator.language.toLowerCase().startsWith("id") ? "id" : "en";
+  } catch {
+    return "en";
+  }
 }
+
+/** A stored choice always wins - including an explicit "en" on an ID device. */
+function initialLocale(): Locale {
+  try {
+    const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
+    if (stored === "en" || stored === "id") return stored;
+  } catch {
+    // No localStorage (tests, private mode) - fall back to the device locale.
+  }
+  return deviceLocale();
+}
+
+let current: Locale = initialLocale();
 
 export function getLocale(): Locale {
   return current;

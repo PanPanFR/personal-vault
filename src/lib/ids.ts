@@ -1,11 +1,18 @@
-const UUIDV4_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+/**
+ * Record ids. The vault keys on client-generated ids so a save never needs a
+ * round trip to the server first.
+ */
 
+/**
+ * UUIDv4 record id.
+ *
+ * `crypto.randomUUID` only exists in a secure context; the fallback keeps the
+ * vault usable on a plain-http LAN address instead of throwing mid-save.
+ */
 export function newRecordId(): string {
-  return crypto.randomUUID();
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  }
 }
-
-export function isUuidV4(value: unknown): value is string {
-  return typeof value === "string" && UUIDV4_RE.test(value);
-}
-export const isRecordId = isUuidV4;
