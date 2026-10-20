@@ -91,4 +91,9 @@ describe("search query syntax (UI rendering layer)", () => {
   it("returns nothing for blank queries", () => {
     expect(runSearch(items, "   ")).toEqual([]);
   });
+
+  it("matches nothing when the query has no criteria", () => {
+    expect(runSearch(items, "AND")).toEqual([]);
+    expect(matches(items[1], "AND")).toBe(false);
+  });
 });

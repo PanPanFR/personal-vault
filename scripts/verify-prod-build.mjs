@@ -134,8 +134,8 @@ async function verifySecurityHeaders(files) {
   check(/object-src 'none'/.test(headers), "CSP object-src is 'none'");
   check(/frame-ancestors 'none'/.test(headers), "CSP denies framing (frame-ancestors)");
   check(
-    !/unsafe-eval(?!')/.test(headers),
-    "CSP has no bare unsafe-eval",
+    !/unsafe-eval/.test(headers),
+    "CSP allows no unsafe-eval at all",
   );
   check(
     !/https?:\/\//.test(

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { useItems, __resetItemsStore } from "../../src/hooks/useItems";
+import { useItems, __resetItemsStore, clearItemsStore } from "../../src/hooks/useItems";
 import type { Item } from "../../src/lib/schemas";
 
 const now = () => new Date().toISOString();
@@ -150,5 +150,60 @@ describe("useItems against the items API", () => {
     await waitFor(() =>
       expect(result.current.items.map((i) => i.title)).toEqual(["From phone"]),
     );
+  });
+
+  it("drops an in-flight response that lands after the store was cleared", async () => {
+    const { result } = renderHook(() => useItems());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // A refresh whose response only lands after the store was cleared.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const baseFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        await gate;
+        return baseFetch(input, init);
+      }),
+    );
+
+    serverStore.set("late-1", { id: "late-1", ...note("Late") });
+    let pending: Promise<void> = Promise.resolve();
+    await act(async () => {
+      pending = result.current.refresh();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      clearItemsStore();
+    });
+    release();
+    await act(async () => {
+      await pending;
+    });
+
+    expect(result.current.items).toEqual([]);
+  });
+
+  it("refetches for a new reader after the store was cleared", async () => {
+    const { result } = renderHook(() => useItems());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    serverStore.set("seed-2", { id: "seed-2", ...note("Seeded") });
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(result.current.items).toHaveLength(1);
+
+    await act(async () => {
+      clearItemsStore();
+    });
+    expect(result.current.items).toEqual([]);
+
+    const { result: second } = renderHook(() => useItems());
+    await waitFor(() => expect(second.current.items).toHaveLength(1));
   });
 });

@@ -48,4 +48,9 @@ export default tseslint.config(
     ],
     languageOptions: { globals: { ...globals.node } },
   },
+  {
+    // Build and release scripts report progress on stdout - that is their job.
+    files: ["scripts/**/*.mjs"],
+    rules: { "no-console": "off" },
+  },
 );

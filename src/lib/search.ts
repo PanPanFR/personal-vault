@@ -75,8 +75,20 @@ function searchableText(item: ItemWithId): string {
   return fields.join(" ").toLowerCase();
 }
 
+/** A query without a single criterion (e.g. just "AND") matches nothing. */
+function hasCriteria(parts: QueryParts): boolean {
+  return (
+    parts.type !== undefined ||
+    parts.tags.length > 0 ||
+    parts.isFavorite !== undefined ||
+    parts.isArchived !== undefined ||
+    parts.text.length > 0
+  );
+}
+
 export function matches(item: ItemWithId, q: string): boolean {
   const parts = parseQuery(q.trim());
+  if (!hasCriteria(parts)) return false;
   if (parts.type && item.type !== parts.type) return false;
   if (parts.tags.length && !parts.tags.every((tag) => item.tags.includes(tag))) return false;
   if (parts.isFavorite !== undefined && item.is_favorite !== parts.isFavorite) return false;

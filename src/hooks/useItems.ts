@@ -19,6 +19,10 @@ export interface ItemsSnapshot {
 let snapshot: ItemsSnapshot = { items: [], loading: true };
 const listeners = new Set<() => void>();
 let loadStarted = false;
+// Bumped on every clear: in-flight responses from an older session are stale.
+let generation = 0;
+// Bumped on every request: only the newest response may update the snapshot.
+let latestRequest = 0;
 
 function emit(): void {
   for (const listener of listeners) listener();
@@ -35,11 +39,15 @@ function getSnapshot(): ItemsSnapshot {
 
 export async function refreshItems(): Promise<void> {
   loadStarted = true;
+  const requestId = ++latestRequest;
+  const requestGeneration = generation;
   try {
     const fetched = await fetchItems();
+    if (requestId !== latestRequest || requestGeneration !== generation) return;
     fetched.sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
     setSnapshot({ items: fetched, loading: false });
   } catch (err) {
+    if (requestId !== latestRequest || requestGeneration !== generation) return;
     if (!(err instanceof AuthError)) {
       // Keep the last known list; the next focus/mutation retries.
       console.warn("items refresh failed:", err);
@@ -54,11 +62,11 @@ function onFocus(): void {
 
 export function subscribeToItems(listener: () => void): () => void {
   listeners.add(listener);
+  if (!loadStarted) {
+    loadStarted = true;
+    void refreshItems();
+  }
   if (listeners.size === 1) {
-    if (!loadStarted) {
-      loadStarted = true;
-      void refreshItems();
-    }
     window.addEventListener("focus", onFocus);
   }
   return () => {
@@ -174,8 +182,11 @@ export function useItems() {
  * never shows the previous one.
  */
 export function clearItemsStore(): void {
+  generation += 1;
+  latestRequest += 1;
   snapshot = { items: [], loading: true };
   loadStarted = false;
+  emit();
 }
 
 /** Test seam: drop the cached list so each spec starts from a clean vault. */
