@@ -1,14 +1,8 @@
 // UI-friendly validation helpers. Caps mirror the frozen foundations
-// contract (src/lib/limits.ts + src/lib/schemas.ts) — do not change values
+// contract (src/lib/limits.ts + src/lib/schemas.ts) - do not change values
 // here; change them in limits.ts under a contract rev.
-import {
-  TAG_MAX_PER_ITEM,
-  TAG_MAX_LENGTH,
-  PLAINTEXT_ITEM_CAP_BYTES,
-} from "./limits";
-import { newRecordId } from "./ids";
-
-export { TAG_MAX_PER_ITEM, TAG_MAX_LENGTH, PLAINTEXT_ITEM_CAP_BYTES };
+import { TAG_MAX_PER_ITEM, TAG_MAX_LENGTH, PLAINTEXT_ITEM_CAP_BYTES } from "./limits";
+import { jsonByteLength } from "./bytes";
 
 export function validateTag(tag: string): string | null {
   if (!tag || tag.trim().length === 0) return "Tag cannot be empty";
@@ -42,15 +36,5 @@ export function validateUrl(url: string): boolean {
 }
 
 export function sizeGuard(payload: unknown): boolean {
-  const json = JSON.stringify(payload);
-  return new TextEncoder().encode(json).length <= PLAINTEXT_ITEM_CAP_BYTES;
-}
-
-/** UI fixture IDs are record UUIDs (foundations ids.ts is source of truth). */
-export function newId(): string {
-  try {
-    return newRecordId();
-  } catch {
-    return Math.random().toString(36).slice(2) + Date.now().toString(36);
-  }
+  return jsonByteLength(payload) <= PLAINTEXT_ITEM_CAP_BYTES;
 }

@@ -1,24 +1,70 @@
-// Vault item store: local component state fed by the API, with the same
-// public shape the UI always had (create/update/remove/favorite/archive/
-// duplicate/restore). Refreshes fire on mutation and on window focus, so two
-// devices converge by simply refetching the list.
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+// Vault item store: one shared snapshot fed by the API.
+//
+// The vault has a single source of truth, so the item list lives in ONE
+// module-level store instead of one copy per hook instance. Every consumer
+// (layout search, pages, QuickAdd, tags) reads the same snapshot and the app
+// fetches the list once per refresh - Ctrl+K can never serve a stale list.
+import { useCallback, useSyncExternalStore } from "react";
 import { ItemSchema, assertPlaintextSize, type Item } from "../lib/schemas";
 import type { ItemWithId } from "../lib/types";
-import { newId, validateTags, validateUrl } from "../lib/validators";
+import { newRecordId } from "../lib/ids";
+import { validateTags, validateUrl } from "../lib/validators";
 import { AuthError, deleteItem, fetchItems, putItem } from "../api/client";
 
-// Cross-instance refresh: every useItems hook in the tree (layout search,
-// pages, QuickAdd, tags) re-reads after any mutation, so Ctrl+K never serves
-// stale results.
-const listeners = new Set<() => void>();
-function bumpStore() {
-  listeners.forEach((fn) => fn());
+export interface ItemsSnapshot {
+  items: ItemWithId[];
+  loading: boolean;
 }
-function subscribe(fn: () => void) {
-  listeners.add(fn);
+
+let snapshot: ItemsSnapshot = { items: [], loading: true };
+const listeners = new Set<() => void>();
+let loadStarted = false;
+
+function emit(): void {
+  for (const listener of listeners) listener();
+}
+
+function setSnapshot(next: Partial<ItemsSnapshot>): void {
+  snapshot = { ...snapshot, ...next };
+  emit();
+}
+
+function getSnapshot(): ItemsSnapshot {
+  return snapshot;
+}
+
+export async function refreshItems(): Promise<void> {
+  try {
+    const fetched = await fetchItems();
+    fetched.sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
+    setSnapshot({ items: fetched, loading: false });
+  } catch (err) {
+    if (!(err instanceof AuthError)) {
+      // Keep the last known list; the next focus/mutation retries.
+      console.warn("items refresh failed:", err);
+    }
+    setSnapshot({ loading: false });
+  }
+}
+
+function onFocus(): void {
+  void refreshItems();
+}
+
+export function subscribeToItems(listener: () => void): () => void {
+  listeners.add(listener);
+  if (listeners.size === 1) {
+    if (!loadStarted) {
+      loadStarted = true;
+      void refreshItems();
+    }
+    window.addEventListener("focus", onFocus);
+  }
   return () => {
-    listeners.delete(fn);
+    listeners.delete(listener);
+    if (listeners.size === 0) {
+      window.removeEventListener("focus", onFocus);
+    }
   };
 }
 
@@ -30,86 +76,45 @@ function assertItemValid(item: Item): void {
   if (item.type === "link" && !validateUrl(item.url)) throw new Error("INVALID_URL");
 }
 
-export function useItems() {
-  const [items, setItems] = useState<ItemWithId[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [version, forceRefresh] = useReducer((v: number) => v + 1, 0);
-  const itemsRef = useRef<ItemWithId[]>([]);
+function findItem(id: string): ItemWithId | undefined {
+  return snapshot.items.find((item) => item.id === id);
+}
 
-  const refresh = useCallback(async () => {
-    try {
-      const fetched = await fetchItems();
-      fetched.sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
-      itemsRef.current = fetched;
-      setItems(fetched);
-    } catch (err) {
-      if (!(err instanceof AuthError)) {
-        // Keep the last known list; the next focus/mutation retries.
-        console.warn("items refresh failed:", err);
-      }
-    } finally {
-      setLoading(false);
-    }
+export function useItems() {
+  const state = useSyncExternalStore(subscribeToItems, getSnapshot, getSnapshot);
+
+  const refresh = useCallback(() => refreshItems(), []);
+
+  const create = useCallback(async (item: Item): Promise<string> => {
+    assertItemValid(item);
+    const id = newRecordId();
+    await putItem({ ...item, id } as ItemWithId);
+    await refreshItems();
+    return id;
   }, []);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh, version]);
+  const update = useCallback(async (id: string, patch: Partial<Item>) => {
+    const current = findItem(id);
+    if (!current) return;
+    const next = {
+      ...current,
+      ...patch,
+      updated_at: new Date().toISOString(),
+      schema_version: 1,
+    } as ItemWithId;
+    assertItemValid(next);
+    await putItem(next);
+    await refreshItems();
+  }, []);
 
-  useEffect(() => subscribe(() => forceRefresh()), []);
-
-  // Another device may have written while this tab was hidden.
-  useEffect(() => {
-    const onFocus = () => {
-      void refresh();
-    };
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [refresh]);
-
-  const create = useCallback(
-    async (item: Item): Promise<string> => {
-      assertItemValid(item);
-      const id = newId();
-      const full = { ...item, id } as ItemWithId;
-      await putItem(full);
-      bumpStore();
-      await refresh();
-      return id;
-    },
-    [refresh],
-  );
-
-  const update = useCallback(
-    async (id: string, patch: Partial<Item>) => {
-      const current = itemsRef.current.find((i) => i.id === id);
-      if (!current) return;
-      const next = {
-        ...current,
-        ...patch,
-        updated_at: new Date().toISOString(),
-        schema_version: 1,
-      } as ItemWithId;
-      assertItemValid(next);
-      await putItem(next);
-      bumpStore();
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const remove = useCallback(
-    async (id: string) => {
-      await deleteItem(id);
-      bumpStore();
-      await refresh();
-    },
-    [refresh],
-  );
+  const remove = useCallback(async (id: string) => {
+    await deleteItem(id);
+    await refreshItems();
+  }, []);
 
   const favorite = useCallback(
     async (id: string, value?: boolean) => {
-      const item = itemsRef.current.find((i) => i.id === id);
+      const item = findItem(id);
       if (!item) return;
       await update(id, { is_favorite: value ?? !item.is_favorite });
     },
@@ -118,16 +123,23 @@ export function useItems() {
 
   const archive = useCallback(
     async (id: string, value?: boolean) => {
-      const item = itemsRef.current.find((i) => i.id === id);
+      const item = findItem(id);
       if (!item) return;
       await update(id, { is_archived: value ?? !item.is_archived });
     },
     [update],
   );
 
+  const restore = useCallback(
+    async (id: string) => {
+      await archive(id, false);
+    },
+    [archive],
+  );
+
   const duplicate = useCallback(
     async (id: string): Promise<string | undefined> => {
-      const item = itemsRef.current.find((i) => i.id === id);
+      const item = findItem(id);
       if (!item) return undefined;
       const now = new Date().toISOString();
       const copy: Item = {
@@ -142,16 +154,9 @@ export function useItems() {
     [create],
   );
 
-  const restore = useCallback(
-    async (id: string) => {
-      await archive(id, false);
-    },
-    [archive],
-  );
-
   return {
-    items,
-    loading,
+    items: state.items,
+    loading: state.loading,
     refresh,
     create,
     update,
@@ -161,4 +166,11 @@ export function useItems() {
     restore,
     duplicate,
   };
+}
+
+/** Test seam: drop the cached list so each spec starts from a clean vault. */
+export function __resetItemsStore(): void {
+  snapshot = { items: [], loading: true };
+  loadStarted = false;
+  listeners.clear();
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { useItems } from "../../src/hooks/useItems";
+import { useItems, __resetItemsStore } from "../../src/hooks/useItems";
 import type { Item } from "../../src/lib/schemas";
 
 const now = () => new Date().toISOString();
@@ -30,6 +30,7 @@ function jsonResponse(data: unknown): Response {
 let serverStore: Map<string, any>;
 
 beforeEach(() => {
+  __resetItemsStore();
   serverStore = new Map();
   vi.stubGlobal(
     "fetch",
