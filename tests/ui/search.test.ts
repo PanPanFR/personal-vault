@@ -61,6 +61,15 @@ describe("search query syntax (UI rendering layer)", () => {
     expect(parseQuery('"shopping list"').text).toEqual(["shopping list"]);
   });
 
+  it("treats an explicit AND as the default (no text term)", () => {
+    expect(parseQuery("milk AND bread").text).toEqual(["milk", "bread"]);
+  });
+
+  it("keeps an unknown type: value as a text term", () => {
+    expect(parseQuery("type:weird").type).toBeUndefined();
+    expect(parseQuery("type:weird").text).toEqual(["type:weird"]);
+  });
+
   it("AND semantics: every text token must match", () => {
     expect(matches(items[1], "milk bread")).toBe(true);
     expect(matches(items[1], "milk cheese")).toBe(false);

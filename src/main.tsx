@@ -6,29 +6,13 @@ import { AuthProvider } from "./hooks/useAuth";
 import { registerServiceWorker } from "./sw-update";
 import { watchInstallPrompt } from "./pwa/platform";
 import { getLocale } from "./i18n";
-import type { Locale } from "./i18n/keys";
+import { applyTheme, readStoredTheme } from "./lib/theme";
 import "./index.css";
 
-// Theme before paint: system preference by default, explicit choice wins.
-const storedTheme = localStorage.getItem("pv-theme");
-if (storedTheme === "dark") {
-  document.documentElement.classList.add("dark");
-} else if (storedTheme === "light") {
-  document.documentElement.classList.add("light");
-} else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-  document.documentElement.classList.add("dark");
-}
+// Theme before paint: the stored choice wins, otherwise the device decides.
+applyTheme(readStoredTheme());
 
-// Locale default = stored choice, else device locale (Indonesian devices → id).
-function deviceLocale(): Locale {
-  try {
-    return navigator.language.toLowerCase().startsWith("id") ? "id" : "en";
-  } catch {
-    return "en";
-  }
-}
-const initialLocale = getLocale() === "en" ? deviceLocale() : getLocale();
-document.documentElement.lang = initialLocale;
+document.documentElement.lang = getLocale();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

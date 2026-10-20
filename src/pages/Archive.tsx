@@ -1,6 +1,7 @@
 import React from "react";
 import { ItemsView } from "../components/ItemsView";
-import type { ItemWithId } from "../lib/types";
+import { t, I18N } from "../i18n";
+
 export default function Archive() {
-  return <ItemsView title="Archive" filter={(i: ItemWithId) => i.is_archived} showQuickAdd={false} />;
+  return <ItemsView title={t(I18N.ARCHIVE)} archived showQuickAdd={false} />;
 }

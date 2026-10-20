@@ -107,7 +107,7 @@ describe("SearchOverlay", () => {
     const user = userEvent.setup();
     renderWithRouter(<SearchOverlay items={fixtureItems} />);
     await user.keyboard("{Control>}k{/Control}");
-    for (const chip of ["type:", "tag:", "is:", "created:", "updated:"]) {
+    for (const chip of ["type:", "tag:", "is:", "AND"]) {
       expect(screen.getByText(chip)).toBeInTheDocument();
     }
     await user.type(screen.getByRole("combobox"), "hello");

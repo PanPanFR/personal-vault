@@ -5,10 +5,7 @@ import { LoginScreen } from "./components/LoginScreen";
 import { useAuth } from "./hooks/useAuth";
 import Dashboard from "./pages/Dashboard";
 import AllItems from "./pages/AllItems";
-import Links from "./pages/Links";
-import Notes from "./pages/Notes";
-import Snippets from "./pages/Snippets";
-import Credentials from "./pages/Credentials";
+import TypeItems from "./pages/TypeItems";
 import Favorites from "./pages/Favorites";
 import Tags from "./pages/Tags";
 import Archive from "./pages/Archive";
@@ -28,10 +25,10 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="items" element={<AllItems />} />
         <Route path="items/:id" element={<ItemDetail />} />
-        <Route path="links" element={<Links />} />
-        <Route path="notes" element={<Notes />} />
-        <Route path="snippets" element={<Snippets />} />
-        <Route path="credentials" element={<Credentials />} />
+        <Route path="links" element={<TypeItems type="link" />} />
+        <Route path="notes" element={<TypeItems type="note" />} />
+        <Route path="snippets" element={<TypeItems type="snippet" />} />
+        <Route path="credentials" element={<TypeItems type="credential" />} />
         <Route path="favorites" element={<Favorites />} />
         <Route path="tags" element={<Tags />} />
         <Route path="tags/:tag" element={<Tags />} />
