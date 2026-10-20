@@ -34,6 +34,7 @@ function getSnapshot(): ItemsSnapshot {
 }
 
 export async function refreshItems(): Promise<void> {
+  loadStarted = true;
   try {
     const fetched = await fetchItems();
     fetched.sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
@@ -168,9 +169,17 @@ export function useItems() {
   };
 }
 
-/** Test seam: drop the cached list so each spec starts from a clean vault. */
-export function __resetItemsStore(): void {
+/**
+ * Drop the cached list (logout). The next reader refetches, so a new session
+ * never shows the previous one.
+ */
+export function clearItemsStore(): void {
   snapshot = { items: [], loading: true };
   loadStarted = false;
+}
+
+/** Test seam: drop the cached list so each spec starts from a clean vault. */
+export function __resetItemsStore(): void {
+  clearItemsStore();
   listeners.clear();
 }

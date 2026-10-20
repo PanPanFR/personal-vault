@@ -7,6 +7,7 @@ import {
   login as apiLogin,
   logout as apiLogout,
 } from "../api/client";
+import { clearItemsStore, refreshItems } from "./useItems";
 
 interface AuthState {
   authed: boolean | null;
@@ -35,19 +36,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Any API 401 (expired cookie, logged out elsewhere) lands here.
   useEffect(() => {
-    const onLogout = () => setAuthed(false);
+    const onLogout = () => {
+      clearItemsStore();
+      setAuthed(false);
+    };
     window.addEventListener(LOGOUT_EVENT, onLogout);
     return () => window.removeEventListener(LOGOUT_EVENT, onLogout);
   }, []);
 
   const login = useCallback(async (password: string) => {
     const ok = await apiLogin(password);
-    if (ok) setAuthed(true);
+    if (ok) {
+      setAuthed(true);
+      // A new session starts from a fresh list, never the previous one.
+      void refreshItems();
+    }
     return ok;
   }, []);
 
   const logout = useCallback(async () => {
     await apiLogout();
+    clearItemsStore();
     setAuthed(false);
   }, []);
 
