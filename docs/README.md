@@ -48,7 +48,7 @@ The API contract is `api-spec.md` and nothing else.
 - [`pwa-operational.md`](pwa-operational.md): the build artefacts, the service
   worker rules, the update lifecycle, the install path, the headers, the
   deploy and rollback runbook and the troubleshooting table.
-- [`decisions.md`](decisions.md): nine decisions that are still in force, plus
+- [`decisions.md`](decisions.md): ten decisions that are still in force, plus
   the table of superseded ones.
 
 ## Conventions
@@ -63,7 +63,6 @@ The API contract is `api-spec.md` and nothing else.
 ## Kept in step with the code
 
 These documents describe the code as it stands. When the code and a document
-disagree, the document is wrong and gets fixed. Two known drifts are recorded
-in [`data-model.md`](data-model.md) (the stale ULID comment in the migration)
-and in [`pwa-operational.md`](pwa-operational.md) (the manifest description and
-the deleted build verification script).
+disagree, the document is wrong and gets fixed. One known drift is recorded in
+[`pwa-operational.md`](pwa-operational.md): the web app manifest still
+describes the vault as encrypted and end to end synced, which it is not.

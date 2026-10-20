@@ -176,6 +176,7 @@ echo "<password>" | npx wrangler secret put PV_PASSWORD
 
 **Verify a deploy.**
 
+0. Run `pnpm release:check` locally. It is the same gate CI runs.
 1. Open the workers.dev address. The login screen appears.
 2. Log in, create an item, reload the page. The item is still there.
 3. Check the response headers on `/api/session` in the browser devtools. The
@@ -229,14 +230,28 @@ After a deploy, confirm:
       `/index.html`, `/manifest.webmanifest`, `/assets/*` and `/icons/*`.
 - [ ] No request to `/api/` appears in the service worker cache storage.
 
-## 11. Known gaps
+## 11. The production build gate
 
-- `scripts/verify-prod-build.mjs` was deleted in the rewrite, so the build
-  time verification of the precache list and the CSP no longer runs. The
-  comment at the top of `src/sw.js` still names it.
-- The manifest description claims encryption and end to end sync.
-- The `created:`, `updated:` and `AND` chips in the search overlay are not
-  implemented by the parser.
+`scripts/verify-prod-build.mjs` runs as `pnpm verify:prod` and checks the
+finished `dist/` before a release. It exits non-zero on any violation:
+
+| Area | Checks |
+|---|---|
+| Installability | the manifest, `index.html` and the PNG icons are emitted, the manifest references icons that exist and declares the 192 and 512 sizes, `display` is `standalone`, the start url is set, the HTML links the manifest and the iOS touch icon |
+| Service worker | `sw.js` is emitted and carries the build id from `build-manifest.json`, the `pv-shell-v` cache prefix is used, `/api/` and `/functions/` are in the never-intercept list, asset caching is gated on the allowlist, no opaque request object is put into the cache, no `/api/` URL is written or fetched by the worker, the precache manifest holds app-shell URLs only |
+| Headers | `dist/_headers` is emitted, the CSP sets `default-src 'self'`, `script-src 'self'`, `object-src 'none'` and `frame-ancestors 'none'`, there is no bare `unsafe-eval` and no remote origin in the CSP, the headers set `nosniff`, `no-referrer` and deny framing, and `/api/*` is served no-store |
+| Remote dependencies | no shipped JS, CSS, HTML or web manifest file references a remote `src`, `href` or import |
+| Worker API | `functions/_shared/http.ts` marks responses no-store and sets `nosniff` and `no-referrer` |
+
+The gate reads the build output, so it must run after `pnpm build`.
+`pnpm release:check` runs typecheck, lint, test, build and this gate in that
+order. The GitHub Actions workflow `.github/workflows/ci.yml` runs the same
+sequence on every push and pull request.
+
+## 12. Known gaps
+
+- The manifest description claims encryption and end to end sync. The app
+  stores plaintext and has no sync engine.
 - The Quick Add shortcut in the manifest points at `/?quick-add=1`. The
   dashboard does not read that query parameter yet.
 

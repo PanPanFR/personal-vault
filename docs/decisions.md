@@ -294,6 +294,51 @@ reinstalling the PWA on every device.
 
 ---
 
+## 0010. One shared item snapshot, a real lint gate and a build gate
+
+- **Status:** Accepted
+- **Date:** 2026-10-20
+
+### Context
+
+The clean code pass found three things that had quietly rotted. The item list
+was copied into every `useItems` instance, with a module level broadcast to
+keep the copies in step, which is a stale list waiting to happen. The `lint`
+script was an alias for `tsc`, so the project had no linting at all. And the
+production build verification script had been deleted with the crypto era, so
+the CSP, the precache allowlist and the no-store rule on `/api/*` were no
+longer checked by anything.
+
+### Decision
+
+- One module level snapshot of the item list in `src/hooks/useItems.ts`,
+  published through `useSyncExternalStore`. Every consumer reads the same
+  array. The first subscriber triggers the first load, the window focus event
+  refreshes it, every mutation refetches, and a logout clears it so a new
+  session never shows the previous list.
+- ESLint with a flat config becomes the `pnpm lint` gate, and CI runs it.
+- `scripts/verify-prod-build.mjs` comes back as `pnpm verify:prod`, a release
+  gate over the finished `dist/`.
+- `pnpm release:check` runs typecheck, lint, test, build and the gate in that
+  order.
+
+### Consequences
+
+There is no second copy of the list to go stale, and the broadcast mechanism
+is gone. Linting is real, so a dead export or a hook rule violation fails the
+build instead of sitting there.
+
+The build gate reads the build output, so it has to run after the build. That
+ordering is why `release:check` exists as one script rather than five
+separate commands.
+
+The pass also fixed three real bugs: the `AND` token in the search parser was
+matched as the literal word "and", the search overlay advertised `created:`
+and `updated:` operators the parser never implemented, and an explicit
+English locale choice was lost on reload.
+
+---
+
 ## Superseded decisions
 
 These were accepted and later removed. They are kept here so the shape of the
@@ -310,7 +355,7 @@ current system is not a mystery.
 | Dexie and IndexedDB as the local store | 2026-10-19 | There is no local copy of the vault. The browser holds the list in React state. |
 | Cloudflare Pages and Pages Functions | 2026-10-19 | Workers static assets is the current target. See decision 0002. |
 | `pages.dev` subdomain | 2026-10-19 | The app serves from `workers.dev` now. See decision 0009. |
-| Contract drift and production build verification scripts | 2026-10-19 | Removed with the rest of the crypto era tooling. The API contract is documented in `docs/api-spec.md` instead. |
+| Contract drift workflow and script | 2026-10-19 | Removed with the rest of the crypto era tooling. The API contract is documented in `docs/api-spec.md` instead. The production build gate came back separately, see decision 0010. |
 
 ## Related documents
 

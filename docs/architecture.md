@@ -90,15 +90,18 @@ response.
 Writing is one request per item. `PUT /api/items/:id` upserts the row. The
 client owns the id, it is a UUIDv4 generated at creation time.
 
-`src/hooks/useItems.ts` is the whole client data layer. It keeps the item list
-in React state and re-fetches it:
+`src/hooks/useItems.ts` is the whole client data layer. It keeps one
+module-level snapshot of the item list and publishes it through
+`useSyncExternalStore`, so every consumer in the tree reads the same array.
+The snapshot is re-fetched:
 
+- once, when the first subscriber attaches;
 - after every mutation, so the list on screen matches what was just written;
 - when the window regains focus, so a change made on another device shows up
-  when the user comes back to the tab;
-- for every other `useItems` instance in the tree. A module level listener set
-  broadcasts a bump after each mutation, so the search overlay and the tag
-  sidebar never serve a stale list.
+  when the user comes back to the tab.
+
+Logging out clears the snapshot (`clearItemsStore`), and a successful login
+refreshes it, so a new session never shows the previous one.
 
 Two devices therefore converge by refetching. There is no push channel and no
 conflict detection. If both devices write the same item, the last write wins
@@ -121,10 +124,13 @@ session check is in flight, `LoginScreen` when signed out, and the route table
 otherwise. Twelve routes sit under one `AppLayout`, which supplies the
 navigation, the search overlay and the theme toggle.
 
-State lives in four hooks: `useAuth` for the gate, `useItems` for the item
-list, `useTags` for derived tag counts, `useTheme` for the appearance. There
-is no client side database. The browser stores only the theme, the locale and
-the service worker reload guard.
+State lives in a module-level item store plus three hooks. The store is
+`src/hooks/useItems.ts`, a `useSyncExternalStore` snapshot that every page,
+the search overlay and the tag sidebar read from. `useAuth` holds the gate,
+`useTags` derives the tag counts with `useMemo`, and `useTheme` holds the
+appearance choice while the logic for reading, resolving and applying it
+lives in `src/lib/theme.ts`. There is no client side database. The browser
+stores only the theme, the locale and the service worker reload guard.
 
 ## 6. Build and deploy pipeline
 
@@ -147,6 +153,13 @@ Manual:
 ```bash
 pnpm deploy
 ```
+
+Before a deploy, `pnpm release:check` runs the same gates as CI: typecheck,
+lint, test, build and the production build gate. `pnpm verify:prod` is that
+last gate on its own. It checks the CSP, the precache allowlist, the absence
+of remote runtime dependencies and the no-store rule on `/api/*`. The script
+is `scripts/verify-prod-build.mjs` and it reads the built `dist/`, so it must
+run after `pnpm build`.
 
 The password is a Worker secret, never a file in the repository:
 
@@ -171,16 +184,17 @@ is git ignored.
 | `functions/api/` | The six route handlers |
 | `migrations/` | The single D1 migration |
 | `src/api/` | The only place that calls `fetch` |
-| `src/hooks/` | Auth gate, item store, tag counts, theme |
-| `src/lib/` | Item contract, limits, validators, ids, search, types |
+| `src/hooks/` | Auth gate, the shared item store, tag counts, theme |
+| `src/lib/` | Item contract, limits, validators, ids, byte sizing, search, theme, types |
 | `src/i18n/` | Locale registry and the English and Indonesian strings |
-| `src/pages/` | One file per route |
-| `src/components/` | Feature components plus the `ui/` primitives |
+| `src/pages/` | One file per route, plus `TypeItems` for the four type routes |
+| `src/components/` | Feature components, the shared `ItemGrid` and `TagChip`, plus the `ui/` primitives |
 | `src/layouts/` | The app shell |
 | `src/sw.js`, `src/sw-update.ts`, `src/pwa/` | Service worker template, update lifecycle, install surface |
-| `scripts/` | PWA build step, icon generation |
+| `scripts/` | PWA build step, production build gate, icon generation |
 | `public/` | Header template, web manifest, icons |
 | `tests/` | Vitest suite, split by area |
+| `eslint.config.js` | Flat ESLint config, the `pnpm lint` gate |
 
 ## 8. Operations runbook
 

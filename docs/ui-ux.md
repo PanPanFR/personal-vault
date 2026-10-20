@@ -13,18 +13,19 @@ baseline. Read it before changing a route, a form field or a token.
 | `/` | `Dashboard` | type counts, tag filters, up to five favorites, six most recent items |
 | `/items` | `AllItems` | every item, card or list |
 | `/items/:id` | `ItemDetail` | one item, with the action row |
-| `/links` | `Links` | items of type `link` |
-| `/notes` | `Notes` | items of type `note` |
-| `/snippets` | `Snippets` | items of type `snippet` |
-| `/credentials` | `Credentials` | items of type `credential` |
+| `/links` | `TypeItems type="link"` | items of type `link` |
+| `/notes` | `TypeItems type="note"` | items of type `note` |
+| `/snippets` | `TypeItems type="snippet"` | items of type `snippet` |
+| `/credentials` | `TypeItems type="credential"` | items of type `credential` |
 | `/favorites` | `Favorites` | items where `is_favorite` is true |
 | `/tags` | `Tags` | the tag index with counts |
 | `/tags/:tag` | `Tags` | items carrying that tag |
 | `/archive` | `Archive` | items where `is_archived` is true |
 | `/settings` | `Settings` | appearance, account, about |
 
-`AllItems`, the four type pages, `Favorites` and `Archive` all render the same
-`ItemsView` component with a different filter function
+`AllItems`, the four type routes, `Favorites` and `Archive` all render the same
+`ItemsView` component with different props: a title, an optional type, an
+`archived` flag and a `favoritesOnly` flag
 (`src/components/ItemsView.tsx`).
 
 The navigation has ten entries: Dashboard, All Items, Links, Notes, Snippets,
@@ -103,6 +104,10 @@ Duplicate resets `is_archived` to false and stamps fresh `created_at` and
 `updated_at` values. Every action writes the whole item and then refetches the
 list, so the view always matches the server.
 
+The type specific fields of an item are rendered by the shared `ItemBody`
+component (`src/components/ItemBody.tsx`), so `ItemDetail` stays the page
+shell and the per type view lives in one place.
+
 `ItemDetail` shows the empty state with a Back action when the id in the URL
 matches no item, for example after a delete on another device.
 
@@ -121,15 +126,23 @@ supports:
 | `is:favorite` | only favorite items |
 | `is:archived` | only archived items |
 | `"two words"` | a quoted phrase is one token |
+| `AND` | a readability helper, every token has to match anyway |
 | anything else | free text |
 
-Free text is matched case insensitively as a substring against the title, the
-body, the content, the url, the description, the notes, the username and the
-tag list. An empty query returns no results rather than every item.
+Free text is matched case insensitively as a substring against the fields of
+the item type: the title and the tags for every item, plus the url,
+description and notes of a link, the body of a note, the content and language
+of a snippet, and the website, username and notes of a credential.
 
-The overlay shows a row of operator chips above the input. Note that the chips
-advertise `created:`, `updated:` and `AND`, which the parser does not
-implement. Those three are display only. Treat the parser as the spec.
+The credential password is deliberately excluded. Searching must never
+surface a secret.
+
+An unknown `type:` or `is:` value falls back to free text instead of matching
+nothing, so a typo degrades into a plain text search. An empty query returns
+no results rather than every item.
+
+The overlay shows a row of operator chips above the input, one per supported
+form: `type:`, `tag:`, `is:`, `"phrase"` and `AND`.
 
 A result is a button that navigates to `/items/:id`.
 
@@ -140,8 +153,13 @@ each tag, sorted by count descending and then by name.
 
 Tags appear in three places: the tag filter row on the dashboard, the same
 row in `ItemsView` where a click filters the current view, and the tag index
-at `/tags`. Clicking a tag on the dashboard filters the recent list, clicking
-it in `ItemsView` filters that view, and `/tags/:tag` shows a dedicated page.
+at `/tags`. All three use the shared `TagChip` component
+(`src/components/TagChip.tsx`), a pill with `aria-pressed` for the active
+state. Clicking a tag on the dashboard filters the recent list, clicking it
+in `ItemsView` filters that view, and `/tags/:tag` shows a dedicated page.
+
+Item cards are rendered by the shared `ItemGrid` component
+(`src/components/ItemGrid.tsx`) in every list view, in card or list mode.
 
 ## 8. Settings
 
@@ -159,21 +177,31 @@ it in `ItemsView` filters that view, and `/tags/:tag` shows a dedicated page.
 Indonesian string in `src/i18n/index.ts`. `t(key)` returns the string for the
 current locale.
 
-The chosen locale is stored in `localStorage["pv-locale"]`. When nothing is
-stored, `src/main.tsx` falls back to the device locale, choosing `id` when
-`navigator.language` starts with `id` and `en` otherwise. The document `lang`
-attribute is set at startup. `index.html` ships `lang="id"`.
+The chosen locale is stored in `localStorage["pv-locale"]`. A stored choice
+always wins, including an explicit English choice on an Indonesian device.
+With no stored choice the locale follows the device: Indonesian when
+`navigator.language` starts with `id`, English otherwise. The resolution lives
+in `src/i18n/index.ts`, and `src/main.tsx` writes the result to the document
+`lang` attribute before the first paint. `index.html` ships `lang="id"`.
 
 Adding a string means adding a key to the registry and both translations to
 the dictionary. `tests/i18n.test.ts` checks that the two stay in step.
 
 ## 10. Theming
 
-Three modes: `system`, `light`, `dark`. The choice is stored in
-`localStorage["pv-theme"]` and applied by adding or removing the `light` and
-`dark` class on the document element. `system` follows the
-`prefers-color-scheme` media query. The theme is applied before the first
-paint in `src/main.tsx`, so there is no flash.
+Three modes: `system`, `light`, `dark`. The logic lives in
+`src/lib/theme.ts`:
+
+- `readStoredTheme` reads `localStorage["pv-theme"]` and falls back to
+  `system` when the stored value is not one of the three, so a corrupted
+  value cannot break the app;
+- `resolveTheme` turns `system` into the `prefers-color-scheme` preference;
+- `applyTheme` puts exactly one class, `light` or `dark`, on the document
+  element.
+
+Because the class is always explicit, the stylesheet needs no
+`prefers-color-scheme` fallback block. `src/main.tsx` applies the theme
+before the first paint, so there is no flash.
 
 `src/index.css` defines a Catppuccin style palette as `--ctp-*` custom
 properties, plus semantic aliases on top of them:
@@ -237,8 +265,6 @@ strategy it shows an actionable notice instead.
 
 ## 14. Known gaps
 
-- The search operator chips advertise `created:`, `updated:` and `AND`. The
-  parser implements none of them.
 - There is no export or import in the interface.
 - The item list has no pagination and no virtualisation. It assumes a few
   hundred items.
@@ -247,6 +273,8 @@ strategy it shows an actionable notice instead.
 - The credential password is masked in the detail view but stored in clear.
 - The type selector in the form is English only, it is not in the locale
   registry.
+- The `AND` chip in the search overlay is a readability helper only, it does
+  not change the result because every token has to match anyway.
 
 ## Related documents
 

@@ -42,6 +42,8 @@ session row in D1 and by matching the password against a secret.
 | A body cannot fork a record | the payload `id` must match the URL id | same |
 | Password guessing is slowed | 10 attempts per IP per 10 minutes | `functions/api/login.ts` |
 | The service worker cannot cache vault data | the API prefix is never intercepted | `src/sw.js` |
+| Searching cannot surface a secret | the credential password is excluded from the searchable text | `src/lib/search.ts` |
+| A release cannot ship with a broken shell | the production build gate checks the CSP, the precache list, the headers and the remote dependencies | `scripts/verify-prod-build.mjs` |
 | The client reacts to a dead session | a 401 broadcasts `pv:logout` and the gate drops to the login screen | `src/api/client.ts`, `src/hooks/useAuth.tsx` |
 
 ## 3. Explicitly not protected
