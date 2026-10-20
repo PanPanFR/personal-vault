@@ -102,7 +102,6 @@ function renderIcon(size, { maskable = false } = {}) {
   const bodyCy = 0.2 * g;
   const bodyHalfW = 0.34 * g;
   const bodyHalfH = 0.28 * g;
-  const shackleCy = bodyCy - bodyHalfH - 0.02 * g;
   const shackleR = 0.2 * g;
   const shackleT = 0.085 * g;
 

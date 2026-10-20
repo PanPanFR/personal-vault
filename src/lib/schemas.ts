@@ -8,6 +8,7 @@ const tagSchema = z
   .string()
   .min(1)
   .max(64)
+  // eslint-disable-next-line no-control-regex -- control characters are rejected on purpose
   .refine((t) => !/[\x00-\x1f\x7f]/.test(t), "tag contains control character")
   .refine((t) => !t.includes('"'), "tag must not contain double quote");
 
