@@ -20,7 +20,7 @@ export class TestServer {
   }
 
   public async fetch(urlStr: string, init?: RequestInit): Promise<Response> {
-    const url = new URL(urlStr, "https://personal-vault.pages.dev");
+    const url = new URL(urlStr, "https://personal-vault.test");
     const pathname = url.pathname;
     const method = (init?.method ?? "GET").toUpperCase();
 
