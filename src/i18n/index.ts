@@ -56,7 +56,7 @@ const en: Record<I18nKey, string> = {
   ADD: "Add",
   LOGIN_DESC: "Enter your password to open the vault.",
   LOGIN_PASSWORD_LABEL: "Password",
-  LOGIN_WRONG: "Wrong password — try again.",
+  LOGIN_WRONG: "Wrong password. Try again.",
   LOGIN_BUTTON: "Open vault",
   LOGOUT: "Log out",
   LOCALE_LABEL: "Language / Bahasa",
@@ -70,6 +70,12 @@ const en: Record<I18nKey, string> = {
   SETTINGS_VERSION: "Version",
   SETTINGS_PRIVACY:
     "Your items live on your own server and are reachable with your password alone. No analytics, no ads, no third-party scripts.",
+  LOADING: "Loading...",
+  LOAD_FAILED: "Could not load the vault.",
+  RETRY: "Retry",
+  ERROR_TITLE: "Something went wrong",
+  ERROR_DESC: "Reload the page to continue. Your data is safe on the server.",
+  RELOAD: "Reload",
 };
 
 const id: Record<I18nKey, string> = {
@@ -125,7 +131,7 @@ const id: Record<I18nKey, string> = {
   ADD: "Tambah",
   LOGIN_DESC: "Masukkan kata sandi untuk membuka brankas.",
   LOGIN_PASSWORD_LABEL: "Kata sandi",
-  LOGIN_WRONG: "Kata sandi salah — coba lagi.",
+  LOGIN_WRONG: "Kata sandi salah. Coba lagi.",
   LOGIN_BUTTON: "Buka brankas",
   LOGOUT: "Keluar",
   LOCALE_LABEL: "Language / Bahasa",
@@ -139,6 +145,12 @@ const id: Record<I18nKey, string> = {
   SETTINGS_VERSION: "Versi",
   SETTINGS_PRIVACY:
     "Item Anda tersimpan di server Anda sendiri dan hanya bisa dibuka dengan kata sandi Anda. Tanpa analitik, tanpa iklan, tanpa skrip pihak ketiga.",
+  LOADING: "Memuat...",
+  LOAD_FAILED: "Gagal memuat brankas.",
+  RETRY: "Coba lagi",
+  ERROR_TITLE: "Terjadi kesalahan",
+  ERROR_DESC: "Muat ulang halaman untuk melanjutkan. Data Anda aman di server.",
+  RELOAD: "Muat ulang",
 };
 
 const DICTS: Record<Locale, Record<I18nKey, string>> = { en, id };

@@ -44,7 +44,7 @@ beforeEach(() => {
       }
       const itemMatch = url.match(/\/api\/items\/([^/]+)$/);
       if (itemMatch) {
-        const id = decodeURIComponent(itemMatch[1]);
+        const id = decodeURIComponent(itemMatch[1] ?? "");
         if (method === "PUT") {
           serverStore.set(id, JSON.parse(init?.body as string));
           return jsonResponse({ ok: true });
@@ -69,6 +69,24 @@ describe("useItems against the items API", () => {
     const { result } = renderHook(() => useItems());
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.items.map((i) => i.title)).toEqual(["Seeded"]);
+  });
+
+  it("reports a failed load and clears the error after a retry", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    (globalThis.fetch as any).mockImplementation(async () => {
+      throw new Error("network down");
+    });
+    const { result } = renderHook(() => useItems());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toBe("network down");
+    expect(result.current.items).toEqual([]);
+
+    (globalThis.fetch as any).mockImplementation(async () => jsonResponse({ items: [] }));
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(result.current.error).toBeNull();
+    warn.mockRestore();
   });
 
   it("creates, updates, favorites, archives, restores, duplicates and deletes", async () => {

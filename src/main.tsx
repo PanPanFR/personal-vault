@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { AuthProvider } from "./hooks/useAuth";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { registerServiceWorker } from "./sw-update";
 import { watchInstallPrompt } from "./pwa/platform";
 import { getLocale } from "./i18n";
@@ -16,11 +17,13 @@ document.documentElement.lang = getLocale();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AuthProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 );
 

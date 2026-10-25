@@ -1,8 +1,9 @@
-import React from "react";
+import { Suspense } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useItems } from "../hooks/useItems";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { SearchOverlay } from "../components/SearchOverlay";
+import { Button } from "../components/ui/Button";
 import { t, I18N } from "../i18n";
 
 const navItems = [
@@ -19,7 +20,8 @@ const navItems = [
 ];
 
 export default function AppLayout() {
-  const { items } = useItems();
+  const { items, loading, error, refresh } = useItems();
+  const firstLoad = loading && items.length === 0;
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas)] text-[var(--color-text)]">
@@ -55,9 +57,38 @@ export default function AppLayout() {
             <ThemeToggle />
           </div>
         </aside>
-        <main id="main-content" className="min-w-0 flex-1 p-4 pb-20 md:p-8 md:pb-8">
+        <main
+          id="main-content"
+          className="min-w-0 flex-1 p-4 pb-20 md:p-8 md:pb-8"
+          aria-busy={firstLoad}
+        >
           <div className="mx-auto w-full max-w-5xl">
-            <Outlet />
+            {error && (
+              <div
+                role="alert"
+                className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-[var(--color-error)] px-3 py-2 text-sm"
+              >
+                <span>{t(I18N.LOAD_FAILED)}</span>
+                <Button size="sm" variant="secondary" onClick={() => void refresh()}>
+                  {t(I18N.RETRY)}
+                </Button>
+              </div>
+            )}
+            {firstLoad ? (
+              <p role="status" className="text-sm text-[var(--color-muted)]">
+                {t(I18N.LOADING)}
+              </p>
+            ) : (
+              <Suspense
+                fallback={
+                  <p role="status" className="text-sm text-[var(--color-muted)]">
+                    {t(I18N.LOADING)}
+                  </p>
+                }
+              >
+                <Outlet />
+              </Suspense>
+            )}
           </div>
         </main>
       </div>

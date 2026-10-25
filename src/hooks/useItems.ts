@@ -14,9 +14,10 @@ import { AuthError, deleteItem, fetchItems, putItem } from "../api/client";
 export interface ItemsSnapshot {
   items: ItemWithId[];
   loading: boolean;
+  error: string | null;
 }
 
-let snapshot: ItemsSnapshot = { items: [], loading: true };
+let snapshot: ItemsSnapshot = { items: [], loading: true, error: null };
 const listeners = new Set<() => void>();
 let loadStarted = false;
 // Bumped on every clear: in-flight responses from an older session are stale.
@@ -45,14 +46,21 @@ export async function refreshItems(): Promise<void> {
     const fetched = await fetchItems();
     if (requestId !== latestRequest || requestGeneration !== generation) return;
     fetched.sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
-    setSnapshot({ items: fetched, loading: false });
+    setSnapshot({ items: fetched, loading: false, error: null });
   } catch (err) {
     if (requestId !== latestRequest || requestGeneration !== generation) return;
-    if (!(err instanceof AuthError)) {
-      // Keep the last known list; the next focus/mutation retries.
-      console.warn("items refresh failed:", err);
+    if (err instanceof AuthError) {
+      // The 401 listener swaps to the login screen; this snapshot is cleared.
+      setSnapshot({ loading: false });
+      return;
     }
-    setSnapshot({ loading: false });
+    // Keep the last known list and surface the failure: an empty list would
+    // otherwise look identical to an empty vault.
+    console.warn("items refresh failed:", err);
+    setSnapshot({
+      loading: false,
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 
@@ -166,6 +174,7 @@ export function useItems() {
   return {
     items: state.items,
     loading: state.loading,
+    error: state.error,
     refresh,
     create,
     update,
@@ -184,7 +193,7 @@ export function useItems() {
 export function clearItemsStore(): void {
   generation += 1;
   latestRequest += 1;
-  snapshot = { items: [], loading: true };
+  snapshot = { items: [], loading: true, error: null };
   loadStarted = false;
   emit();
 }
