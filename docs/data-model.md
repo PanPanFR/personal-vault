@@ -31,9 +31,14 @@ that is the only place it exists.
 
 | Column | Type | Null | Constraint | Meaning |
 |---|---|---|---|---|
-| `token` | TEXT | no | PRIMARY KEY | 32 random bytes, hex encoded |
+| `token_hash` | TEXT | no | PRIMARY KEY | SHA-256 hex of the 32-byte cookie token |
 | `created_at` | TEXT | no | none | ISO-8601 timestamp of the login |
 | `expires_at` | TEXT | no | none | ISO-8601 timestamp, login time plus 90 days |
+
+The raw token is never stored. `getRequestSession` hashes the cookie and looks
+up the hash; `destroySession` deletes by the same hash. Migration `0002`
+rebuilt the table from the old plaintext `token` column, which invalidated every
+session that existed before it (one re-login, items untouched).
 
 Expired rows are removed by `purgeExpiredSessions`, which runs on every
 session creation. The table therefore holds the sessions of the last 90 days
@@ -69,8 +74,8 @@ Base fields, present on every item:
 | `tags` | string array | optional, defaults to empty |
 | `is_favorite` | boolean | required |
 | `is_archived` | boolean | required |
-| `created_at` | string | non-empty, ISO-8601 in practice |
-| `updated_at` | string | non-empty, ISO-8601 in practice |
+| `created_at` | string | ISO-8601 date-time, required |
+| `updated_at` | string | ISO-8601 date-time, required |
 | `schema_version` | integer | at least 1, currently always 1 |
 
 The base schema is `.passthrough()`, so unknown fields survive a round trip
@@ -124,9 +129,9 @@ itself lives in `src/lib/bytes.ts`, so the schema guard, the UI validator and
 the Worker agree on what 256 KiB means. The cap is counted in bytes, not
 characters, so multi-byte text costs more than its character count suggests.
 
-The server has its own, larger cap of 300 KiB on the raw request body, so a
-client that skips the client side check still cannot push an unbounded
-payload.
+The server enforces both caps: 300 KiB on the raw request body, checked on the
+stream, and 256 KiB on the parsed item. A client that skips the client side
+check still cannot push an unbounded payload.
 
 `src/lib/validators.ts` re-exports the three constants so the UI and the
 contract read from one place. Change a value in `src/lib/limits.ts`, not in

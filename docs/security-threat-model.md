@@ -26,8 +26,9 @@ session row in D1 and by matching the password against a secret.
 | Protection | Mechanism | Source |
 |---|---|---|
 | Password never leaves the Worker | the login body is read and compared server side | `functions/api/login.ts` |
-| Password is not stored in the database | it lives in a Worker secret, compared as a string | `functions/_shared/auth.ts` |
+| Password is not stored in the database | it lives in a Worker secret, compared as a SHA-256 digest in constant time | `functions/_shared/auth.ts` |
 | Session token cannot be read by JavaScript | the cookie is `HttpOnly` | `sessionCookie` in `functions/_shared/auth.ts` |
+| A database dump cannot replay sessions | only `sha256(token)` is stored in `sessions` | `createSession`, migration `0002` |
 | Session token is not sent cross site | the cookie is `SameSite=Lax` | same |
 | Session token is not sent over plain http | the cookie gains `Secure` on https requests | `isSecureRequest` |
 | A stolen session expires | the row carries `expires_at`, 90 days out | `getRequestSession` |
@@ -37,8 +38,8 @@ session row in D1 and by matching the password against a secret.
 | The referrer is not leaked | `Referrer-Policy: no-referrer` | same |
 | Only same origin resources load | the CSP allows no third party origin | `scripts/build-pwa.mjs` |
 | SQL injection | every query is parameterised with `?` bindings | `functions/_shared/auth.ts`, `functions/api/items/[id].ts` |
-| Oversized payloads | 300 KiB raw body cap, checked before parsing | `functions/api/items/[id].ts` |
-| Malformed payloads | the shape check rejects a body that is not a plausible item | same |
+| Oversized payloads | 300 KiB raw body cap, enforced on the stream before parsing | `functions/api/items/[id].ts`, `functions/_shared/http.ts` |
+| Malformed payloads | the same zod `ItemSchema` the client uses runs on the Worker | `functions/api/items/[id].ts` |
 | A body cannot fork a record | the payload `id` must match the URL id | same |
 | Password guessing is slowed | 10 attempts per IP per 10 minutes | `functions/api/login.ts` |
 | The service worker cannot cache vault data | the API prefix is never intercepted | `src/sw.js` |
@@ -54,8 +55,7 @@ session row in D1 and by matching the password against a secret.
 | Cloudflare account compromise | the attacker can read the database and read or replace `PV_PASSWORD` |
 | The `PV_PASSWORD` secret | it is visible to anyone with Worker secret access, which is the account owner |
 | No second factor | the password is the only thing standing between a stranger and the vault |
-| No password hashing | the password is compared as a plain string, so it exists in clear in the Worker runtime and in the secret store |
-| No constant time comparison | a timing side channel on the password check is theoretically possible |
+| No password hashing | the password is compared as a digest, but it exists in clear in the Worker runtime and in the secret store |
 | Password change does not revoke sessions | `wrangler secret put PV_PASSWORD` leaves existing session rows valid until they expire |
 | No session rotation | the token is the same for its whole 90 day life |
 | The rate limit is approximate | the counter lives in one Worker isolate, so it resets on recycle and is not shared between isolates |
@@ -69,10 +69,11 @@ session row in D1 and by matching the password against a secret.
 
 ## 4. Session security
 
-The token is 32 bytes from `crypto.getRandomValues`, hex encoded. It is
-compared against the `sessions` table on every data request, together with an
-`expires_at` check, so an expired token is rejected even though the row may
-still exist.
+The token is 32 bytes from `crypto.getRandomValues`, hex encoded. Only its
+SHA-256 hash is stored in `sessions`; the raw token exists in the cookie and
+nowhere else. Every data request hashes the cookie and looks that hash up,
+together with an `expires_at` check, so an expired token is rejected even
+though the row may still exist.
 
 Cookie attributes: `HttpOnly`, `SameSite=Lax`, `Path=/`, `Max-Age=7776000`,
 and `Secure` when the request protocol is https. The `Secure` attribute is
@@ -128,10 +129,10 @@ The client validates before it writes. `useItems` runs `ItemSchema.parse`,
 `assertPlaintextSize` and `validateTags`, plus the link URL rule, and refuses
 to send an item that fails any of them.
 
-The server validates independently but more loosely: the body must be a
-plausible item (string `id`, `type`, `title`, `updated_at`, and `updated_at`
-under 64 bytes), the payload id must match the URL id, and the raw body must
-be under 300 KiB. The zod schema is not re-run server side.
+The server validates independently with the same `ItemSchema` the client uses,
+requires the payload id to match the URL id, caps the raw body at 300 KiB while
+streaming it, and re-checks the 256 KiB serialized item cap. Unknown fields
+still pass through.
 
 All SQL uses `?` bindings. There is no string interpolation of user input
 into a query anywhere in `functions/`.

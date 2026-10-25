@@ -137,18 +137,19 @@ Success: `200` with `{"ok": true}`.
 | Status | `error` | Cause |
 |---|---|---|
 | 400 | `missing_id` | the route parameter is empty |
-| 400 | `invalid_item` | the shape check failed |
+| 400 | `invalid_item` | the shared zod `ItemSchema` rejected the body |
 | 400 | `id_mismatch` | the `id` inside the body differs from the id in the URL |
-| 413 | `payload_too_large` | the raw body is larger than 300 KiB |
+| 413 | `payload_too_large` | the raw body is larger than 300 KiB, or the parsed item is larger than 256 KiB |
 | 401 | `unauthorized` | no valid session |
 
-The shape check requires an object with string `id`, `type`, `title` and
-`updated_at`, and `updated_at` under 64 bytes. The `id` match rule is not
-cosmetic: the UI keys on the item id, so a mismatch would fork one record
-into two rows on the next save.
+The body must satisfy the same zod `ItemSchema` the client uses, including
+ISO-8601 `created_at` and `updated_at`. Unknown fields pass through, so a future
+client can add one without a server change. The `id` match rule is not
+cosmetic: the UI keys on the item id, so a mismatch would fork one record into
+two rows on the next save.
 
-The body is measured in raw bytes before `JSON.parse` runs, so an oversized
-payload is rejected without being parsed.
+The body is measured while it is streamed, so the 300 KiB cap is enforced
+before the whole payload is buffered and before `JSON.parse` runs.
 
 ### `DELETE /api/items/:id`
 
@@ -176,22 +177,25 @@ database and from every device on the next fetch.
 | `missing_id` | 400 | `PUT` and `DELETE /api/items/:id` |
 | `invalid_item` | 400 | `PUT /api/items/:id` |
 | `id_mismatch` | 400 | `PUT /api/items/:id` |
-| `payload_too_large` | 413 | `PUT /api/items/:id` |
+| `payload_too_large` | 413 | `PUT /api/items/:id`, `POST /api/login` (body over 1 KiB) |
 | `invalid_json` | 400 | `readJsonBody`, when the body does not parse |
+| `invalid_body` | 400 | `readCappedText`, when the request stream fails mid-read |
+
+`POST /api/login` advertises the wait on a 429 with a `Retry-After` header in
+seconds.
 
 ## 6. Size caps
 
 | Cap | Value | Enforced in |
 |---|---|---|
-| Raw request body | 300 KiB | `MAX_BODY_BYTES` in `functions/api/items/[id].ts` |
-| Serialized item | 256 KiB | `PLAINTEXT_ITEM_CAP_BYTES` in `src/lib/limits.ts` |
+| Raw item body | 300 KiB | `MAX_BODY_BYTES` in `functions/api/items/[id].ts` |
+| Serialized item | 256 KiB | `PLAINTEXT_ITEM_CAP_BYTES` in `src/lib/limits.ts`, re-checked in the Worker |
+| Login body | 1 KiB | `LOGIN_MAX_BODY_BYTES` in `functions/api/login.ts` |
 | Tags per item | 20 | `TAG_MAX_PER_ITEM` in `src/lib/limits.ts` |
 | Tag length | 64 characters | `TAG_MAX_LENGTH` in `src/lib/limits.ts` |
 
-The client checks the 256 KiB cap before writing, the server checks the 300
-KiB cap on the raw body. The server does not re-validate the item against the
-zod schema, so the client is the only place where the field rules are
-enforced.
+The server validates the parsed item against the same zod schema as the client.
+The client is no longer the only place where field rules are enforced.
 
 ## 7. Client contract
 

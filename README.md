@@ -8,7 +8,10 @@ plaintext storage on your own Cloudflare account, works from every device.
 - React SPA (Vite + Tailwind) served by Cloudflare Workers (static assets)
 - 6-route JSON API in Worker functions (`functions/`), data in D1 (`items` + `sessions`)
 - Auth = one password (`PV_PASSWORD` Worker secret) → HttpOnly session cookie
-  (90 days), login rate-limited per IP
+  (90 days), login rate-limited per IP. Only a SHA-256 hash of the session token
+  is stored in D1.
+- API bodies are capped while streaming: 300 KiB raw item, 256 KiB parsed item,
+  1 KiB login.
 - PWA: installable app shell, no offline data cache
 
 **Security model, out loud:** items are stored **plaintext** in D1. Sessions
@@ -52,8 +55,10 @@ to Cloudflare Pages for new projects; the `functions/` handlers are compiled to
 a single Worker script by `wrangler pages functions build`, which is part of
 `pnpm build`).
 
-**A. Git-connected (push to deploy) via Workers Builds.**
+Schema changes need one manual step before the deploy that ships them:
+`npx wrangler d1 migrations apply personal-vault --remote`.
 
+**A. Git-connected (push to deploy) via Workers Builds.**
 - Connect the GitHub repo once: Workers & Pages → the `personal-vault` Worker →
   Settings → Builds → connect `PanPanFR/personal-vault`.
 - Build command: `pnpm build`

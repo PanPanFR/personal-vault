@@ -88,10 +88,11 @@ whose database is in their own Cloudflare account.
 
 ### Decision
 
-The password is a Worker secret, `PV_PASSWORD`. It is compared as a plain
-string on login. Items are stored as plaintext JSON in D1. The session is an
-opaque random token in a `sessions` table, handed back as an `HttpOnly`
-cookie.
+The password is a Worker secret, `PV_PASSWORD`. Login compares a SHA-256 digest
+of the submitted password with a digest of the secret in constant time (the
+secret itself is never stored in the database). Items are stored as plaintext
+JSON in D1. The session is an opaque random token in a `sessions` table, handed
+back as an `HttpOnly` cookie; only the token's SHA-256 hash is stored.
 
 ### Consequences
 
@@ -336,6 +337,42 @@ The pass also fixed three real bugs: the `AND` token in the search parser was
 matched as the literal word "and", the search overlay advertised `created:`
 and `updated:` operators the parser never implemented, and an explicit
 English locale choice was lost on reload.
+
+---
+
+## 0011. Hardened boundaries, explicit failure states, keyboard-safe overlays
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+
+### Context
+
+A best-practice review found gaps that the existing tests did not cover: request
+bodies were buffered before their limit was checked, a malformed cookie escape
+could raise a 500, login compared the password with `!==`, the sessions table
+held raw tokens, and the Worker trusted item shapes the client had validated.
+On the client, a failed fetch looked like an empty vault, a render error blanked
+the page, and both dialogs lacked focus management.
+
+### Decision
+
+- Body limits are enforced while streaming; login accepts at most 1 KiB.
+- Cookies tolerate malformed percent escapes; the raw value is used.
+- Password comparison hashes both sides and compares in constant time.
+- Sessions store `sha256(token)`; migration `0002` rebuilds the table.
+- The Worker runs the same zod `ItemSchema` as the client and re-checks 256 KiB.
+- The shared item snapshot carries an `error`; the layout shows Retry.
+- An `ErrorBoundary` covers render failures.
+- Modal and SearchOverlay trap focus, restore it, close on Escape, and the
+  search combobox supports arrow keys and Enter.
+- CI enforces coverage thresholds; routes are split into lazy chunks.
+
+### Consequences
+
+Migration `0002` invalidates every existing session, so one re-login is
+required after deploy. The Worker bundle includes zod. The initial JS chunk is
+smaller because pages load on demand. Error and loading states are now visible
+instead of being inferred from an empty list.
 
 ---
 
