@@ -5,9 +5,10 @@
 // cookie. Every data route checks the cookie against the table. That's it —
 // no hashing ceremony, no device keys, no signatures.
 import { parseCookies } from "./http";
+import type { D1Database } from "./d1";
 
 export interface Env {
-  DB: any; // D1 binding; typed loosely to stay independent of workers-types
+  DB: D1Database;
   PV_PASSWORD?: string;
 }
 
@@ -21,13 +22,26 @@ export function newToken(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+export async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Compare two secrets without leaking where the first difference is. */
+export async function constantTimeEqual(a: string, b: string): Promise<boolean> {
+  const [left, right] = await Promise.all([sha256Hex(a), sha256Hex(b)]);
+  let diff = 0;
+  for (let i = 0; i < left.length; i++) diff |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  return diff === 0;
+}
+
 export async function getRequestSession(request: Request, env: Env): Promise<string | null> {
   const token = parseCookies(request)[SESSION_COOKIE];
   if (!token) return null;
   const row = await env.DB.prepare(
-    "SELECT token FROM sessions WHERE token = ? AND expires_at > ?",
+    "SELECT token_hash FROM sessions WHERE token_hash = ? AND expires_at > ?",
   )
-    .bind(token, new Date().toISOString())
+    .bind(await sha256Hex(token), new Date().toISOString())
     .first();
   return row ? token : null;
 }
@@ -43,14 +57,20 @@ export async function createSession(env: Env): Promise<string> {
   const token = newToken();
   const now = Date.now();
   await purgeExpiredSessions(env);
-  await env.DB.prepare("INSERT INTO sessions (token, created_at, expires_at) VALUES (?, ?, ?)")
-    .bind(token, new Date(now).toISOString(), new Date(now + SESSION_TTL_MS).toISOString())
+  await env.DB.prepare("INSERT INTO sessions (token_hash, created_at, expires_at) VALUES (?, ?, ?)")
+    .bind(
+      await sha256Hex(token),
+      new Date(now).toISOString(),
+      new Date(now + SESSION_TTL_MS).toISOString(),
+    )
     .run();
   return token;
 }
 
 export async function destroySession(env: Env, token: string): Promise<void> {
-  await env.DB.prepare("DELETE FROM sessions WHERE token = ?").bind(token).run();
+  await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?")
+    .bind(await sha256Hex(token))
+    .run();
 }
 
 export function sessionCookie(token: string, secure: boolean): string {

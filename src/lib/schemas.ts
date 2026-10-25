@@ -2,7 +2,9 @@ import { z } from "zod";
 import { PLAINTEXT_ITEM_CAP_BYTES } from "./limits";
 import { jsonByteLength } from "./bytes";
 
-const ISO_DATE = z.string().min(1);
+// Offset form stays acceptable so a legacy row saved with a ±HH:MM stamp
+// can still be re-saved.
+const ISO_DATE = z.string().datetime({ offset: true });
 
 const tagSchema = z
   .string()

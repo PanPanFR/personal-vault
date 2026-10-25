@@ -2,19 +2,40 @@
 //
 // Brute-force guard: per-IP in-memory attempt counter (per isolate). Good
 // enough for a personal vault: 10 attempts / 10 minutes.
-import { errorResponse, json } from "../_shared/http";
-import { createSession, isSecureRequest, sessionCookie, type Env } from "../_shared/auth";
+import { errorResponse, json, readCappedText } from "../_shared/http";
+import {
+  constantTimeEqual,
+  createSession,
+  isSecureRequest,
+  sessionCookie,
+  type Env,
+} from "../_shared/auth";
 import type { PagesFunction } from "../_shared/http";
 
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 10;
+const LOGIN_MAX_BODY_BYTES = 1024;
+const MAX_TRACKED_IPS = 1000;
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
+
+/** Drop expired entries so a long-lived isolate cannot grow without bound. */
+function pruneExpired(now: number): void {
+  for (const [ip, entry] of attempts) {
+    if (now >= entry.resetAt) attempts.delete(ip);
+  }
+}
 
 function isRateLimited(ip: string, now = Date.now()): boolean {
   const entry = attempts.get(ip);
   if (!entry || now >= entry.resetAt) return false;
   return entry.count >= MAX_ATTEMPTS;
+}
+
+function retryAfterSeconds(ip: string, now = Date.now()): number {
+  const entry = attempts.get(ip);
+  if (!entry) return WINDOW_MS / 1000;
+  return Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
 }
 
 function recordFailure(ip: string, now = Date.now()): void {
@@ -32,20 +53,30 @@ export function resetRateLimiter(): void {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  const now = Date.now();
+  if (attempts.size > MAX_TRACKED_IPS) pruneExpired(now);
+
   const ip = request.headers.get("CF-Connecting-IP") ?? "local";
-  if (isRateLimited(ip)) return errorResponse(429, "too_many_attempts");
+  if (isRateLimited(ip, now)) {
+    return errorResponse(429, "too_many_attempts", {
+      "Retry-After": String(retryAfterSeconds(ip, now)),
+    });
+  }
+
+  const body = await readCappedText(request, LOGIN_MAX_BODY_BYTES);
+  if (!body.ok) return body.response;
 
   let password = "";
   try {
-    const body = (await request.json()) as { password?: unknown };
-    if (typeof body?.password === "string") password = body.password;
+    const parsed = JSON.parse(body.text) as { password?: unknown };
+    if (typeof parsed?.password === "string") password = parsed.password;
   } catch {
     // fall through to the 401 below
   }
 
   if (!env.PV_PASSWORD) return errorResponse(500, "password_not_configured");
-  if (!password || password !== env.PV_PASSWORD) {
-    recordFailure(ip);
+  if (!password || !(await constantTimeEqual(password, env.PV_PASSWORD))) {
+    recordFailure(ip, now);
     return errorResponse(401, "wrong_password");
   }
 

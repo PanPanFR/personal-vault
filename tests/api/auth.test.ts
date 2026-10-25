@@ -36,6 +36,16 @@ describe("auth: login / session / logout", () => {
     expect(row?.n).toBe(1);
   });
 
+  it("stores only a hash of the session token", async () => {
+    const cookie = await server.login();
+    const token = cookie.split("=")[1];
+    const row = await server.db
+      .prepare("SELECT token_hash FROM sessions")
+      .first<{ token_hash: string }>();
+    expect(row?.token_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(row?.token_hash).not.toBe(token);
+  });
+
   it("wrong password returns 401 wrong_password and creates no session", async () => {
     const res = await server.fetch("/api/login", {
       method: "POST",
@@ -106,6 +116,7 @@ describe("auth: login / session / logout", () => {
       body: JSON.stringify({ password: TEST_PASSWORD }),
     });
     expect(blocked.status).toBe(429);
+    expect(Number(blocked.headers.get("Retry-After"))).toBeGreaterThan(0);
 
     // A different IP is unaffected.
     const other = await server.fetch("/api/login", {
@@ -137,6 +148,15 @@ describe("auth: login / session / logout", () => {
     expect(sessionCookie("tok", true)).toContain("Secure");
     expect(sessionCookie("tok", false)).not.toContain("Secure");
     expect(clearedCookie(true)).toContain("Max-Age=0");
+  });
+
+  it("rejects a login body over 1 KiB without parsing it", async () => {
+    const res = await server.fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: "x".repeat(2048) }),
+    });
+    expect(res.status).toBe(413);
   });
 
   it("login is not configurable when PV_PASSWORD is missing", async () => {

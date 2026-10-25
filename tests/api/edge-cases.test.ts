@@ -4,6 +4,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { TestServer } from "../helpers/test-harness";
 import { resetRateLimiter } from "../../functions/api/login";
+import { PLAINTEXT_ITEM_CAP_BYTES } from "../../src/lib/limits";
 
 const MAX_BODY_BYTES = 300 * 1024;
 
@@ -57,7 +58,7 @@ describe("adversarial edge cases", () => {
     resetRateLimiter();
     server = new TestServer();
     cookie = await server.login();
-    token = cookie.split("=")[1];
+    token = cookie.split("=")[1] ?? "";
   });
 
   afterEach(() => {
@@ -66,7 +67,14 @@ describe("adversarial edge cases", () => {
 
   describe("cookie tampering", () => {
     it("rejects unknown, empty and malformed tokens", async () => {
-      for (const bad of ["pv_session=deadbeef", "pv_session=", "pv_session=%20%20", "pv_session=" + "0".repeat(64)]) {
+      for (const bad of [
+        "pv_session=deadbeef",
+        "pv_session=",
+        "pv_session=%20%20",
+        "pv_session=" + "0".repeat(64),
+        // Incomplete UTF-8 escape: decodeURIComponent would throw.
+        "pv_session=%E0%A4%A",
+      ]) {
         const res = await server.fetch("/api/items", { headers: { Cookie: bad } });
         expect(res.status).toBe(401);
       }
@@ -142,11 +150,43 @@ describe("adversarial edge cases", () => {
       expect(res.status).toBe(200);
     });
 
-    it("body gate is byte-exact: 300 KiB passes, 300 KiB + 1 fails", async () => {
-      const atLimit = await putRaw(server, cookie, "sized-ok", sizedBody(MAX_BODY_BYTES, "sized-ok"));
+    it("rejects a shape the shared zod schema would not read back", async () => {
+      const badDate = { ...note("bad-date", "x"), updated_at: "not-a-date" };
+      expect((await putItem(server, cookie, badDate)).status).toBe(400);
+
+      const missing = { ...note("missing-field", "x") } as Record<string, unknown>;
+      delete missing.is_favorite;
+      expect((await putItem(server, cookie, missing)).status).toBe(400);
+
+      const wrongVersion = { ...note("bad-version", "x"), schema_version: 0 };
+      expect((await putItem(server, cookie, wrongVersion)).status).toBe(400);
+    });
+
+    it("still accepts legacy offset timestamps", async () => {
+      const legacy = { ...note("offset-date", "x"), updated_at: "2026-01-01T00:00:00+07:00" };
+      expect((await putItem(server, cookie, legacy)).status).toBe(200);
+    });
+
+    it("item cap is byte-exact: 256 KiB passes, 256 KiB + 1 fails", async () => {
+      const atLimit = await putRaw(
+        server,
+        cookie,
+        "sized-ok",
+        sizedBody(PLAINTEXT_ITEM_CAP_BYTES, "sized-ok"),
+      );
       expect(atLimit.status).toBe(200);
 
-      const over = await putRaw(server, cookie, "sized-over", sizedBody(MAX_BODY_BYTES + 1, "sized-over"));
+      const over = await putRaw(
+        server,
+        cookie,
+        "sized-over",
+        sizedBody(PLAINTEXT_ITEM_CAP_BYTES + 1, "sized-over"),
+      );
+      expect(over.status).toBe(413);
+    });
+
+    it("raw body over the 300 KiB parse gate is rejected before parsing", async () => {
+      const over = await putRaw(server, cookie, "raw-over", sizedBody(MAX_BODY_BYTES + 1, "raw-over"));
       expect(over.status).toBe(413);
     });
 
