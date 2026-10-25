@@ -1,5 +1,5 @@
 // Settings — deliberately small: appearance, account, about.
-import React, { useState } from "react";
+import { useState } from "react";
 import { Card } from "../components/ui/Card";
 import { Select } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";

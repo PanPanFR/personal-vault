@@ -1,5 +1,5 @@
 // Login screen — the one page in front of everything. One password field.
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { I18N, t } from "../i18n";

@@ -174,7 +174,10 @@ export async function registerServiceWorker(options: {
 }
 
 /** Prompt-mode activation: ask the WAITING worker to take over, then reload once. */
-export async function applyServiceWorkerUpdate(registration: ServiceWorkerRegistration | null): Promise<void> {
+export async function applyServiceWorkerUpdate(
+  registration: ServiceWorkerRegistration | null,
+  reload: () => void = () => location.reload(),
+): Promise<void> {
   // Only ever message the waiting worker: the active one already controls us and
   // SKIP_WAITING would be a no-op round trip.
   const waiting = registration?.waiting ?? null;
@@ -192,7 +195,7 @@ export async function applyServiceWorkerUpdate(registration: ServiceWorkerRegist
     );
     waiting.postMessage({ type: "SKIP_WAITING" });
   });
-  consumeReloadForBuild(state.buildId ?? "manual");
+  consumeReloadForBuild(state.buildId ?? "manual", reload);
 }
 
 /** Eviction/reset helper: drop every worker + cache (clean-start tooling + specs). */

@@ -1,4 +1,3 @@
-import React from "react";
 import { useTheme } from "../hooks/useTheme";
 import { t, I18N } from "../i18n";
 

@@ -1,4 +1,3 @@
-import React from "react";
 import { ItemCard } from "./ItemCard";
 import type { ItemWithId } from "../lib/types";
 

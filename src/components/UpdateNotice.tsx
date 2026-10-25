@@ -6,7 +6,7 @@
  * button instead. Both read the same store, so switching strategies is a
  * one-line change in src/sw-update.ts.
  */
-import React, { useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { getSwState, subscribeToSwState } from "../sw-update";
 
 export function UpdateNotice() {

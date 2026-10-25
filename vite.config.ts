@@ -54,5 +54,20 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
     globals: true,
+    coverage: {
+      provider: "v8",
+      reporter: ["text-summary", "lcov"],
+      include: ["src/**/*.{ts,tsx}", "functions/**/*.ts"],
+      // Bootstrap and the service-worker template are exercised by the build
+      // gate, not by unit tests.
+      exclude: ["src/main.tsx", "src/vite-env.d.ts"],
+      thresholds: {
+        // Measured floors (2026-10). Raise as coverage grows, never lower.
+        statements: 64,
+        branches: 52,
+        functions: 53,
+        lines: 67,
+      },
+    },
   },
 });

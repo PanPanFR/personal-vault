@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
 import { ItemForm } from "./ItemForm";

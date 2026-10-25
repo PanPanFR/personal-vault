@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeEach, afterEach, vi } from "vitest";
-import React from "react";
 import { render, screen, cleanup, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import App from "../../src/App";

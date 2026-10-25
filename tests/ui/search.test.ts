@@ -71,8 +71,8 @@ describe("search query syntax (UI rendering layer)", () => {
   });
 
   it("AND semantics: every text token must match", () => {
-    expect(matches(items[1], "milk bread")).toBe(true);
-    expect(matches(items[1], "milk cheese")).toBe(false);
+    expect(matches(items[1]!, "milk bread")).toBe(true);
+    expect(matches(items[1]!, "milk cheese")).toBe(false);
   });
 
   it("filters by type + tag + favorite", () => {
@@ -94,6 +94,6 @@ describe("search query syntax (UI rendering layer)", () => {
 
   it("matches nothing when the query has no criteria", () => {
     expect(runSearch(items, "AND")).toEqual([]);
-    expect(matches(items[1], "AND")).toBe(false);
+    expect(matches(items[1]!, "AND")).toBe(false);
   });
 });

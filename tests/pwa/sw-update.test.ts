@@ -173,13 +173,16 @@ describe("service worker registration lifecycle", () => {
     await registerServiceWorker({ enabled: true, strategy: "prompt" });
 
     const reload = vi.fn();
-    const pending = applyServiceWorkerUpdate(registration as unknown as ServiceWorkerRegistration);
+    const pending = applyServiceWorkerUpdate(
+      registration as unknown as ServiceWorkerRegistration,
+      reload,
+    );
     // The worker claims asynchronously; fire controllerchange like a browser would.
     for (const handler of listeners.get("controllerchange") ?? []) handler({});
     await pending;
 
     expect(waiting.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
-    expect(reload).toBeDefined();
+    expect(reload).toHaveBeenCalledOnce();
   });
 
   test("registration failure surfaces as an error state instead of throwing", async () => {

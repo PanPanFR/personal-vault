@@ -1,4 +1,3 @@
-import React from "react";
 import { Button } from "./ui/Button";
 import { t, I18N } from "../i18n";
 import type { ItemWithId } from "../lib/types";

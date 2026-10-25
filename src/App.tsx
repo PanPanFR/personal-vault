@@ -1,16 +1,19 @@
-import React from "react";
+import { lazy } from "react";
 import { Routes, Route } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
 import { LoginScreen } from "./components/LoginScreen";
 import { useAuth } from "./hooks/useAuth";
-import Dashboard from "./pages/Dashboard";
-import AllItems from "./pages/AllItems";
-import TypeItems from "./pages/TypeItems";
-import Favorites from "./pages/Favorites";
-import Tags from "./pages/Tags";
-import Archive from "./pages/Archive";
-import Settings from "./pages/Settings";
-import ItemDetail from "./pages/ItemDetail";
+
+// Route-level splitting: the shell plus the login screen are the only eager
+// chunks. The layout's Suspense boundary covers the lazy pages.
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AllItems = lazy(() => import("./pages/AllItems"));
+const TypeItems = lazy(() => import("./pages/TypeItems"));
+const Favorites = lazy(() => import("./pages/Favorites"));
+const Tags = lazy(() => import("./pages/Tags"));
+const Archive = lazy(() => import("./pages/Archive"));
+const Settings = lazy(() => import("./pages/Settings"));
+const ItemDetail = lazy(() => import("./pages/ItemDetail"));
 
 export default function App() {
   const { authed } = useAuth();

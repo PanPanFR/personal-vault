@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useItems } from "../hooks/useItems";
 import { Card } from "../components/ui/Card";

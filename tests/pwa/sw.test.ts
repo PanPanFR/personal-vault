@@ -182,7 +182,7 @@ function createSandbox(options: SandboxOptions): Sandbox {
       });
       handler({ request, respondWith: (p: Promise<Response>) => dispatched.push(p), waitUntil: () => undefined });
       if (dispatched.length === 0) return null;
-      return dispatched[0];
+      return dispatched[0] ?? null;
     },
     async dispatchMessage(data: unknown) {
       dispatched.length = 0;

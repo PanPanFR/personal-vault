@@ -5,7 +5,7 @@
  * Share > Add to Home Screen recipe. Everything else keeps the app fully usable
  * in a plain browser tab — install is never a gate.
  */
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getInstallState,
   isStandalone,
